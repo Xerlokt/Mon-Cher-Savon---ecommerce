@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { Money } from '../domain/shared/money.js';
 import { anOrder } from '../domain/order/testing/order.builder.js';
-import { NotifySaleUseCase, formatSaleMessage } from './notify-sale.use-case.js';
+import { NotifySaleUseCase, formatPhone, formatSaleMessage } from './notify-sale.use-case.js';
 import { FakeChannel, FakeNotificationLog, FakeNotificationSettings } from './testing/fakes.js';
 
 const order = () =>
@@ -27,7 +27,26 @@ describe('formatSaleMessage', () => {
   });
 });
 
+describe('formatPhone', () => {
+  it('formats Brazilian mobile and landline numbers and leaves others untouched', () => {
+    expect(formatPhone('11912345678')).toBe('(11) 91234-5678');
+    expect(formatPhone('1133334444')).toBe('(11) 3333-4444');
+    expect(formatPhone('+1 555')).toBe('+1 555');
+  });
+});
+
 describe('NotifySaleUseCase', () => {
+  it('sends the destination saved for each channel', async () => {
+    const telegram = new FakeChannel('telegram');
+    await new NotifySaleUseCase(
+      [telegram],
+      new FakeNotificationSettings(['telegram'], { telegram: '555' }),
+      new FakeNotificationLog(),
+      'x',
+    ).execute(order());
+    expect(telegram.sent[0]?.destination).toBe('555');
+  });
+
   it('sends only through enabled channels and survives a failing one', async () => {
     const telegram = new FakeChannel('telegram');
     const whatsapp = new FakeChannel('whatsapp', true);

@@ -41,13 +41,38 @@ export interface SaleNotification {
   text: string;
 }
 
+export type ChannelName = 'telegram' | 'whatsapp';
+
 export interface NotificationChannel {
-  readonly name: 'telegram' | 'whatsapp';
-  send(message: SaleNotification): Promise<void>;
+  readonly name: ChannelName;
+  send(message: SaleNotification, destination: string): Promise<void>;
+}
+
+export interface NotificationSetting {
+  channel: ChannelName;
+  enabled: boolean;
+  destination: string;
 }
 
 export interface NotificationSettingsRepository {
-  enabledChannels(): Promise<Array<'telegram' | 'whatsapp'>>;
+  enabledTargets(): Promise<Array<{ channel: ChannelName; destination: string }>>;
+  all(): Promise<NotificationSetting[]>;
+  save(setting: NotificationSetting): Promise<void>;
+}
+
+export interface OutboxEntry {
+  id: string;
+  type: string;
+  payload: Record<string, unknown>;
+  attempts: number;
+}
+
+/** Worker side of the outbox: claims due events with a lease so crashed workers are retried. */
+export interface OutboxQueue {
+  claimDue(limit: number, now: Date, leaseMs: number): Promise<OutboxEntry[]>;
+  markSent(id: string): Promise<void>;
+  markRetry(id: string, attempts: number, nextAttemptAt: Date): Promise<void>;
+  markFailed(id: string, attempts: number): Promise<void>;
 }
 
 export interface NotificationLogRepository {

@@ -1,10 +1,14 @@
 import type { Order } from '../../domain/order/order.js';
 import type { Product } from '../../domain/product/product.js';
 import type {
+  ChannelName,
   NotificationChannel,
+  NotificationSetting,
   NotificationLogRepository,
   NotificationSettingsRepository,
   OrderRepository,
+  OutboxEntry,
+  OutboxQueue,
   OutboxRepository,
   PaymentGateway,
   ProcessedPaymentRepository,
@@ -99,21 +103,75 @@ export class InMemoryOutbox implements OutboxRepository {
 }
 
 export class FakeChannel implements NotificationChannel {
-  readonly sent: SaleNotification[] = [];
+  readonly sent: Array<SaleNotification & { destination: string }> = [];
   constructor(
-    readonly name: 'telegram' | 'whatsapp',
+    readonly name: ChannelName,
     private readonly fail = false,
   ) {}
-  async send(message: SaleNotification): Promise<void> {
+  async send(message: SaleNotification, destination: string): Promise<void> {
     if (this.fail) throw new Error('channel down');
-    this.sent.push(message);
+    this.sent.push({ ...message, destination });
   }
 }
 
 export class FakeNotificationSettings implements NotificationSettingsRepository {
-  constructor(private readonly enabled: Array<'telegram' | 'whatsapp'>) {}
-  async enabledChannels() {
-    return this.enabled;
+  readonly settings: NotificationSetting[];
+  constructor(
+    enabled: ChannelName[] = [],
+    destinations: Partial<Record<ChannelName, string>> = {},
+  ) {
+    this.settings = (['telegram', 'whatsapp'] as const).map((channel) => ({
+      channel,
+      enabled: enabled.includes(channel),
+      destination: destinations[channel] ?? `dest-${channel}`,
+    }));
+  }
+  async enabledTargets() {
+    return this.settings
+      .filter((s) => s.enabled)
+      .map(({ channel, destination }) => ({ channel, destination }));
+  }
+  async all() {
+    return this.settings.map((s) => ({ ...s }));
+  }
+  async save(setting: NotificationSetting) {
+    const index = this.settings.findIndex((s) => s.channel === setting.channel);
+    if (index >= 0) this.settings[index] = { ...setting };
+  }
+}
+
+export class InMemoryOutboxQueue implements OutboxQueue {
+  readonly entries: Array<
+    OutboxEntry & { status: 'PENDING' | 'SENT' | 'FAILED'; nextAttemptAt: Date }
+  > = [];
+  add(
+    entry: { type: string; payload: Record<string, unknown>; attempts?: number },
+    due = new Date(0),
+  ) {
+    const id = `e${this.entries.length + 1}`;
+    this.entries.push({ id, attempts: 0, ...entry, status: 'PENDING', nextAttemptAt: due });
+    return id;
+  }
+  async claimDue(limit: number, now: Date, leaseMs: number) {
+    const due = this.entries
+      .filter((e) => e.status === 'PENDING' && e.nextAttemptAt <= now)
+      .slice(0, limit);
+    for (const e of due) e.nextAttemptAt = new Date(now.getTime() + leaseMs);
+    return due.map(({ id, type, payload, attempts }) => ({ id, type, payload, attempts }));
+  }
+  private get(id: string) {
+    const entry = this.entries.find((e) => e.id === id);
+    if (!entry) throw new Error('unknown entry');
+    return entry;
+  }
+  async markSent(id: string) {
+    this.get(id).status = 'SENT';
+  }
+  async markRetry(id: string, attempts: number, nextAttemptAt: Date) {
+    Object.assign(this.get(id), { attempts, nextAttemptAt, status: 'PENDING' });
+  }
+  async markFailed(id: string, attempts: number) {
+    Object.assign(this.get(id), { attempts, status: 'FAILED' });
   }
 }
 

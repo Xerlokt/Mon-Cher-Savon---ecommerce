@@ -7,6 +7,17 @@ const schema = z.object({
   PAYMENT_MODE: z.enum(['mercadopago', 'fake']).default('mercadopago'),
   MERCADOPAGO_ACCESS_TOKEN: z.string().optional(),
   MERCADOPAGO_WEBHOOK_SECRET: z.string().optional(),
+  TELEGRAM_BOT_TOKEN: z.string().optional(),
+  TELEGRAM_API_BASE_URL: z.string().optional(),
+  WHATSAPP_CLOUD_TOKEN: z.string().optional(),
+  WHATSAPP_PHONE_NUMBER_ID: z.string().optional(),
+  WHATSAPP_TEMPLATE_NAME: z.string().default('nova_venda'),
+  OUTBOX_POLL_MS: z.coerce.number().int().min(500).default(5000),
+  WORKER_ENABLED: z
+    .enum(['true', 'false'])
+    .default('true')
+    .transform((v) => v === 'true'),
+  ADMIN_BOOTSTRAP_TOKEN: z.string().optional(),
   ORDER_EXPIRATION_MINUTES: z.coerce.number().int().min(5).default(30),
   SHIPPING_PICKUP_CENTS: z.coerce.number().int().min(0).default(0),
   SHIPPING_LOCAL_CENTS: z.coerce.number().int().min(0).default(1000),

@@ -42,3 +42,11 @@ describe('admin contracts', () => {
     expect(stockAdjustmentSchema.safeParse({ delta: -2, reason: 'ADJUSTMENT' }).success).toBe(true);
   });
 });
+
+describe('dashboard period', () => {
+  it('accepts only the three presets', async () => {
+    const { dashboardPeriodSchema } = await import('./admin.js');
+    expect(dashboardPeriodSchema.safeParse('7dias').success).toBe(true);
+    expect(dashboardPeriodSchema.safeParse('ano').success).toBe(false);
+  });
+});

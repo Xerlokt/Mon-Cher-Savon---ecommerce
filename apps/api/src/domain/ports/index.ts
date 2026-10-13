@@ -198,3 +198,16 @@ export interface AdminProductRepository {
 export interface ImageStorage {
   save(data: Buffer, extension: 'jpg' | 'png' | 'webp'): Promise<{ url: string }>;
 }
+
+export interface DashboardRaw {
+  /** Days with sales only (YYYY-MM-DD in São Paulo time). */
+  byDay: Array<{ day: string; salesCount: number; revenueCents: number }>;
+  topProducts: Array<{ name: string; quantity: number; revenueCents: number }>;
+  topIngredients: Array<{ name: string; quantity: number }>;
+  lowStock: Array<{ id: string; name: string; stock: number }>;
+}
+
+/** Read model for the seller dashboard; aggregation happens in the database. */
+export interface DashboardQuery {
+  aggregate(from: Date, to: Date): Promise<DashboardRaw>;
+}

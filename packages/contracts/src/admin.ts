@@ -97,3 +97,21 @@ export interface AdminOrderDetail extends AdminOrderSummary {
   shippingCents: number;
   items: Array<{ productName: string; quantity: number; unitPriceCents: number }>;
 }
+
+export const dashboardPeriodSchema = z.enum(['hoje', '7dias', 'mes']);
+export type DashboardPeriod = z.infer<typeof dashboardPeriodSchema>;
+
+export interface DashboardMetrics {
+  period: DashboardPeriod;
+  /** First and last day (YYYY-MM-DD, São Paulo time) covered by the numbers. */
+  from: string;
+  to: string;
+  revenueCents: number;
+  salesCount: number;
+  averageTicketCents: number;
+  /** One entry per day of the period, including days without sales. */
+  salesByDay: Array<{ day: string; salesCount: number; revenueCents: number }>;
+  topProducts: Array<{ name: string; quantity: number; revenueCents: number }>;
+  topIngredients: Array<{ name: string; quantity: number }>;
+  lowStock: Array<{ id: string; name: string; stock: number }>;
+}

@@ -51,6 +51,9 @@ import {
   AdminGuard,
   SESSION_TOKENS,
 } from './presentation/http/admin.guard.js';
+import { GetDashboardUseCase } from './application/dashboard.use-case.js';
+import { PrismaDashboardQuery } from './infrastructure/prisma/prisma-dashboard.query.js';
+import { DashboardController } from './presentation/http/dashboard.controller.js';
 import { LoginUseCase } from './application/admin-auth.use-cases.js';
 import { ChangeOrderStatusUseCase } from './application/admin-orders.use-cases.js';
 import {
@@ -94,6 +97,7 @@ const CHANNELS = 'NOTIFICATION_CHANNELS';
     AdminOrdersController,
     AdminProductsController,
     AdminCatalogSupportController,
+    DashboardController,
   ],
   providers: [
     PrismaService,
@@ -131,6 +135,12 @@ const CHANNELS = 'NOTIFICATION_CHANNELS';
           decoy,
         );
       },
+      inject: [PrismaService],
+    },
+    {
+      provide: GetDashboardUseCase,
+      useFactory: (prisma: PrismaService) =>
+        new GetDashboardUseCase(new PrismaDashboardQuery(prisma)),
       inject: [PrismaService],
     },
     {

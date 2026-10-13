@@ -22,6 +22,8 @@ export interface CreateOrderInput {
   };
   shippingOption: ShippingOption;
   paymentMethod: 'PIX' | 'CARD';
+  cardToken?: string;
+  cardPaymentMethodId?: string;
 }
 
 export interface CreateOrderResult {
@@ -73,6 +75,8 @@ export class CreateOrderUseCase {
       amountCents: order.total.cents,
       method: input.paymentMethod,
       payerEmail: input.customer.email,
+      ...(input.cardToken ? { cardToken: input.cardToken } : {}),
+      ...(input.cardPaymentMethodId ? { cardPaymentMethodId: input.cardPaymentMethodId } : {}),
     });
     return {
       orderId: order.id,

@@ -38,6 +38,7 @@ export interface OrderProps {
   items: OrderItem[];
   shipping: Money;
   paidAt?: Date | null;
+  createdAt?: Date;
 }
 
 export class Order {
@@ -52,6 +53,7 @@ export class Order {
     private _paidAt: Date | null,
     readonly customer: Customer,
     readonly address: Address,
+    readonly createdAt: Date,
   ) {}
 
   static create(props: OrderProps): Order {
@@ -68,6 +70,7 @@ export class Order {
       props.paidAt ?? null,
       props.customer,
       props.address,
+      props.createdAt ?? new Date(),
     );
   }
 

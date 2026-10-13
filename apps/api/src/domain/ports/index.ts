@@ -20,6 +20,7 @@ export interface OrderRepository {
   save(order: Order): Promise<void>;
   findById(id: string): Promise<Order | null>;
   findByPublicCode(code: string): Promise<Order | null>;
+  findAwaitingPaymentCreatedBefore(date: Date): Promise<Order[]>;
 }
 
 export interface PaymentGateway {
@@ -28,6 +29,8 @@ export interface PaymentGateway {
     amountCents: number;
     method: 'PIX' | 'CARD';
     payerEmail: string;
+    cardToken?: string;
+    cardPaymentMethodId?: string;
   }): Promise<{ providerPaymentId: string; pixCopyPaste?: string; pixQrCodeBase64?: string }>;
   getPayment(
     providerPaymentId: string,

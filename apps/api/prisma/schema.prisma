@@ -116,7 +116,7 @@ model Payment {
   orderId           String
   provider          String
   providerPaymentId String        @unique
-  method            PaymentMethod
+  method            PaymentMethod?
   status            String
   order             Order         @relation(fields: [orderId], references: [id])
 }

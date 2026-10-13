@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { cepSchema, orderStatusSchema } from './index.js';
+import { cepSchema, orderStatusSchema } from './base.js';
 
 describe('contracts', () => {
   it('accepts CEP with and without hyphen', () => {

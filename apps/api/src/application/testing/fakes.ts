@@ -42,6 +42,9 @@ export class InMemoryOrders implements OrderRepository {
   async findByPublicCode(code: string): Promise<Order | null> {
     return this.items.find((o) => o.publicCode === code) ?? null;
   }
+  async findAwaitingPaymentCreatedBefore(date: Date): Promise<Order[]> {
+    return this.items.filter((o) => o.status === 'AWAITING_PAYMENT' && o.createdAt < date);
+  }
 }
 
 type PaymentState = { status: 'PENDING' | 'APPROVED' | 'REJECTED'; orderId: string };

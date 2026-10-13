@@ -2,6 +2,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { startTestDatabase, type TestDatabase } from '../testing/test-database.js';
 import { PrismaCatalogQuery } from './prisma-catalog.query.js';
 import { PrismaProductRepository } from './prisma-product.repository.js';
+import { TransactionalDb } from './transactional-db.js';
 
 let db: TestDatabase;
 
@@ -85,7 +86,7 @@ describe('PrismaCatalogQuery', () => {
 
 describe('PrismaProductRepository', () => {
   it('maps rows to domain products and persists stock changes', async () => {
-    const repo = new PrismaProductRepository(db.prisma);
+    const repo = new PrismaProductRepository(new TransactionalDb(db.prisma));
     const product = await repo.findBySlug('lavanda');
     expect(product?.stock).toBe(5);
     product?.decreaseStock(2);

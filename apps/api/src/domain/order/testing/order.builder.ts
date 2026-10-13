@@ -14,6 +14,8 @@ export class OrderBuilder {
   private shipping = Money.zero();
   private status: OrderStatus = 'AWAITING_PAYMENT';
   private customItems = false;
+  private id = 'o1';
+  private created = new Date();
 
   withItem(item: {
     unitPrice: Money;
@@ -45,6 +47,16 @@ export class OrderBuilder {
     return this;
   }
 
+  withId(id: string): this {
+    this.id = id;
+    return this;
+  }
+
+  createdAt(date: Date): this {
+    this.created = date;
+    return this;
+  }
+
   pendingPayment(): this {
     this.status = 'AWAITING_PAYMENT';
     return this;
@@ -57,11 +69,12 @@ export class OrderBuilder {
 
   build(): Order {
     return Order.create({
-      id: 'o1',
+      id: this.id,
       publicCode: 'A7K2',
       status: this.status,
       items: this.items,
       shipping: this.shipping,
+      createdAt: this.created,
       customer: { name: 'Maria Souza', phone: '11900000000', email: 'maria@example.com' },
       address: {
         cep: Cep.of('01310-100'),

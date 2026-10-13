@@ -1,4 +1,5 @@
 import { DomainError } from '../shared/domain-error.js';
+import type { Cep } from '../shared/cep.js';
 import { Money } from '../shared/money.js';
 import type { OrderPaid } from '../events/order-paid.js';
 import { InvalidOrderTransitionError, OrderNotPaidError } from './errors.js';
@@ -12,7 +13,25 @@ export interface OrderItem {
   quantity: number;
 }
 
+export interface Customer {
+  name: string;
+  phone: string;
+  email: string;
+}
+
+export interface Address {
+  cep: Cep;
+  street: string;
+  number: string;
+  district: string;
+  city: string;
+  state: string;
+  complement?: string;
+}
+
 export interface OrderProps {
+  customer: Customer;
+  address: Address;
   id: string;
   publicCode: string;
   status?: OrderStatus;
@@ -31,6 +50,8 @@ export class Order {
     readonly items: readonly OrderItem[],
     readonly shipping: Money,
     private _paidAt: Date | null,
+    readonly customer: Customer,
+    readonly address: Address,
   ) {}
 
   static create(props: OrderProps): Order {
@@ -45,6 +66,8 @@ export class Order {
       props.items,
       props.shipping,
       props.paidAt ?? null,
+      props.customer,
+      props.address,
     );
   }
 

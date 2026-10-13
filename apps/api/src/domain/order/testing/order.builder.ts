@@ -1,3 +1,4 @@
+import { Cep } from '../../shared/cep.js';
 import { Money } from '../../shared/money.js';
 import { Order, type OrderItem, type OrderStatus } from '../order.js';
 
@@ -61,6 +62,16 @@ export class OrderBuilder {
       status: this.status,
       items: this.items,
       shipping: this.shipping,
+      customer: { name: 'Maria Souza', phone: '11900000000', email: 'maria@example.com' },
+      address: {
+        cep: Cep.of('01310-100'),
+        street: 'Rua das Flores',
+        number: '120',
+        district: 'Centro',
+        city: 'São Paulo',
+        state: 'SP',
+        complement: 'ap. 3',
+      },
     });
   }
 }

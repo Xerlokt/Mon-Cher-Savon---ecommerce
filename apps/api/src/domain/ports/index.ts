@@ -50,3 +50,25 @@ export interface NotificationSettingsRepository {
 export interface NotificationLogRepository {
   record(orderId: string, channels: string[], results: PromiseSettledResult<void>[]): Promise<void>;
 }
+
+export interface UnitOfWork {
+  run<T>(work: () => Promise<T>): Promise<T>;
+}
+
+export interface ProcessedPaymentRepository {
+  /** Returns false when this provider payment was already processed (idempotency). */
+  markProcessed(providerPaymentId: string, orderId: string): Promise<boolean>;
+}
+
+export interface StockMovementRepository {
+  record(movement: {
+    productId: string;
+    delta: number;
+    reason: 'SALE' | 'RESTOCK' | 'ADJUSTMENT';
+    orderId?: string;
+  }): Promise<void>;
+}
+
+export interface OutboxRepository {
+  add(event: { type: string; payload: Record<string, unknown> }): Promise<void>;
+}

@@ -1,0 +1,30 @@
+name: Reset public demo
+# Wipes the demo database and loads fake data again every day. Disabled until DEMO_ENABLED is "true".
+on:
+  schedule:
+    - cron: '0 8 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  reset:
+    if: ${{ vars.DEMO_ENABLED == 'true' }}
+    runs-on: ubuntu-latest
+    environment: demo
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: pnpm }
+      - run: pnpm install --frozen-lockfile --ignore-scripts
+      - run: pnpm --filter @mon-cher-savon/api exec prisma generate
+      - run: pnpm --filter @mon-cher-savon/api db:deploy
+        env: { DATABASE_URL: '${{ secrets.DEMO_DATABASE_URL }}' }
+      # The script refuses to run unless DEMO_CONFIRM_DB_NAME matches the real database name.
+      - run: pnpm --filter @mon-cher-savon/api db:reset-demo
+        env:
+          DATABASE_URL: ${{ secrets.DEMO_DATABASE_URL }}
+          DEMO_MODE: 'true'
+          DEMO_CONFIRM_DB_NAME: ${{ vars.DEMO_DB_NAME }}

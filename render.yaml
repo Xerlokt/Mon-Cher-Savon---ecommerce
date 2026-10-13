@@ -1,0 +1,31 @@
+# Render blueprint for the API (Docker). The web app is deployed on Vercel (see docs/deploy.md).
+# Secrets are marked `sync: false`: fill them in the Render dashboard, never in this file.
+services:
+  - type: web
+    name: mon-cher-savon-api
+    runtime: docker
+    dockerfilePath: ./apps/api/Dockerfile
+    dockerContext: .
+    plan: free
+    healthCheckPath: /api/v1/shipping-options
+    preDeployCommand: pnpm --filter @mon-cher-savon/api db:deploy
+    envVars:
+      - { key: NODE_ENV, value: production }
+      - { key: API_PORT, value: '3001' }
+      - { key: TRUST_PROXY, value: 'true' }
+      - { key: COOKIE_SECURE, value: 'true' }
+      - { key: ENABLE_DOCS, value: 'false' }
+      - { key: PAYMENT_MODE, value: mercadopago }
+      - { key: DATABASE_URL, sync: false }
+      - { key: SESSION_SECRET, sync: false }
+      - { key: WEB_ORIGIN, sync: false }
+      - { key: API_PUBLIC_URL, sync: false }
+      - { key: MERCADOPAGO_ACCESS_TOKEN, sync: false }
+      - { key: MERCADOPAGO_WEBHOOK_SECRET, sync: false }
+      - { key: TELEGRAM_BOT_TOKEN, sync: false }
+      - { key: UPLOAD_DIR, value: /var/data/uploads }
+    # Uploaded photos need a persistent disk until an object storage adapter replaces local disk.
+    disk:
+      name: uploads
+      mountPath: /var/data
+      sizeGB: 1

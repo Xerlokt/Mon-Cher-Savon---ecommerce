@@ -29,7 +29,7 @@ function Chip({ href, active, children }: { href: string; active: boolean; child
 function Group({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <section aria-label={title}>
-      <h3 className="mb-2 font-heading text-base text-sage-700">{title}</h3>
+      <h2 className="mb-2 font-heading text-base text-sage-700">{title}</h2>
       <div className="flex flex-wrap gap-2">{children}</div>
     </section>
   );

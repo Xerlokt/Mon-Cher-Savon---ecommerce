@@ -31,6 +31,9 @@ const securityHeaders = [
 const nextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
+  // Search engines and audit tools must see <title> and meta tags in the initial <head>,
+  // not streamed later in the body.
+  htmlLimitedBots: /.*/,
   transpilePackages: ['@mon-cher-savon/ui-tokens', '@mon-cher-savon/contracts'],
   images: { formats: ['image/avif', 'image/webp'] },
   async headers() {

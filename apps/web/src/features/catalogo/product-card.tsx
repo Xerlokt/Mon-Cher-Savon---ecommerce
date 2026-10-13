@@ -3,7 +3,14 @@ import Link from 'next/link';
 import { formatPrice } from '@/shared/format';
 import type { ProductSummary } from './types';
 
-export function ProductCard({ product }: { product: ProductSummary }) {
+/** `priority` is for cards that are visible without scrolling: they are the page's largest image. */
+export function ProductCard({
+  product,
+  priority = false,
+}: {
+  product: ProductSummary;
+  priority?: boolean;
+}) {
   return (
     <article className="group relative overflow-hidden rounded-card bg-clay-100 shadow-soft">
       <div className="relative aspect-square bg-cream-50">
@@ -12,6 +19,7 @@ export function ProductCard({ product }: { product: ProductSummary }) {
             src={product.imageUrl}
             alt=""
             fill
+            priority={priority}
             unoptimized={
               product.imageUrl.endsWith('.svg') || product.imageUrl.startsWith('/uploads')
             }

@@ -49,9 +49,9 @@ export default async function HomePage() {
           <p>Estamos preparando os sabonetes. Volte em instantes.</p>
         ) : (
           <ul className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
-            {products.slice(0, 4).map((p) => (
+            {products.slice(0, 4).map((p, i) => (
               <li key={p.id}>
-                <ProductCard product={p} />
+                <ProductCard product={p} priority={i < 2} />
               </li>
             ))}
           </ul>

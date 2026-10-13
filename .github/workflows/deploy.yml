@@ -1,0 +1,44 @@
+name: Deploy
+# Runs only after CI succeeded on main, and only when the repository variable DEPLOY_ENABLED is "true"
+# (so a fork or a fresh clone never tries to deploy). The web app deploys through Vercel's Git
+# integration (preview per pull request, production on main); this workflow handles the API.
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  api:
+    name: Migrate database and deploy API
+    if: ${{ github.event.workflow_run.conclusion == 'success' && vars.DEPLOY_ENABLED == 'true' }}
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+        with: { ref: '${{ github.event.workflow_run.head_sha }}' }
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: pnpm }
+      - run: pnpm install --frozen-lockfile --ignore-scripts
+      - run: pnpm --filter @mon-cher-savon/api exec prisma generate
+      # Non-destructive: applies only the migrations that are not in production yet.
+      - run: pnpm --filter @mon-cher-savon/api db:deploy
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      - name: Trigger the API deploy
+        run: curl --fail --silent --show-error -X POST "$RENDER_DEPLOY_HOOK_URL"
+        env:
+          RENDER_DEPLOY_HOOK_URL: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
+      - name: Smoke test
+        run: |
+          for i in $(seq 1 30); do
+            if curl --fail --silent "$API_PUBLIC_URL/api/v1/shipping-options" > /dev/null; then echo "API is up"; exit 0; fi
+            sleep 10
+          done
+          echo "API did not come up in time"; exit 1
+        env:
+          API_PUBLIC_URL: ${{ vars.API_PUBLIC_URL }}

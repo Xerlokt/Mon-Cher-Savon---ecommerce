@@ -150,9 +150,13 @@ export function CheckoutForm({
     }
   }
 
-  if (hydrated && items.length === 0) {
+  // The cart lives in the browser, so until it is read the page keeps the room the final content
+  // needs (avoids the footer jumping, which Lighthouse counts as layout shift).
+  if (!hydrated) return <div aria-busy="true" className="min-h-[70vh]" />;
+
+  if (items.length === 0) {
     return (
-      <div>
+      <div className="min-h-[70vh]">
         <p>Seu carrinho está vazio.</p>
         <Link
           href="/catalogo"

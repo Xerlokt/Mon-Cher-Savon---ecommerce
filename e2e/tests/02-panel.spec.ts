@@ -99,7 +99,10 @@ test.describe('painel da vendedora', () => {
     await expect(page.getByText('Pronto! Marcado como entregue.')).toBeVisible();
   });
 
-  test('sabonetes: estoque com + e −, cadastro em passos com foto e desfazer', async ({ page }) => {
+  test('sabonetes: estoque com + e −, cadastro em passos com foto e desfazer', async ({
+    page,
+  }, testInfo) => {
+    const productName = `Sabonete E2E ${testInfo.project.name}`;
     await login(page);
     await skipTourIfShown(page);
     await page.getByRole('link', { name: 'Meus sabonetes' }).click();
@@ -129,7 +132,7 @@ test.describe('painel da vendedora', () => {
     await page.getByRole('button', { name: 'Continuar' }).click(); // sem nome nem preço
     await expect(page.getByText(/Dê um nome ao sabonete/)).toBeVisible();
     await expect(page.getByText(/Informe o preço/)).toBeVisible();
-    await page.getByLabel('Nome do sabonete').fill('Sabonete E2E de Alecrim');
+    await page.getByLabel('Nome do sabonete').fill(productName);
     await page.getByLabel('Preço (R$)').fill('12,50');
     await page.getByRole('button', { name: 'Aumentar quantidade' }).click();
     await expectAccessible(page, 'cadastro: nome e preço');
@@ -137,11 +140,11 @@ test.describe('painel da vendedora', () => {
 
     await page.getByLabel(/karité/i).check();
     await page.getByRole('button', { name: 'Continuar' }).click();
-    await expect(page.getByText('Sabonete E2E de Alecrim')).toBeVisible();
+    await expect(page.getByText(productName)).toBeVisible();
     await page.getByRole('button', { name: 'Salvar sabonete' }).click();
 
     await expect(page).toHaveURL(/\/painel\/sabonetes$/);
-    const created = page.getByRole('listitem').filter({ hasText: 'Sabonete E2E de Alecrim' });
+    const created = page.getByRole('listitem').filter({ hasText: productName });
     await expect(created).toBeVisible();
     await expect(created.getByRole('img')).toHaveCount(0); // a foto é decorativa (alt vazio)
     await expect(created.locator('img')).toHaveAttribute('src', /^\/uploads\/[0-9a-f]+\.png$/);
@@ -150,7 +153,7 @@ test.describe('painel da vendedora', () => {
     // (a vitrine guarda a lista por até 15 s, então recarregamos até ela aparecer)
     await expect(async () => {
       await page.goto('/catalogo');
-      await expect(page.getByRole('link', { name: /Sabonete E2E de Alecrim/ })).toBeVisible({
+      await expect(page.getByRole('link', { name: new RegExp(productName) })).toBeVisible({
         timeout: 1500,
       });
     }).toPass({ timeout: 45_000, intervals: [2000] });
@@ -158,19 +161,16 @@ test.describe('painel da vendedora', () => {
 
     // Tirar da loja com confirmação e Desfazer (10 s)
     await created.getByRole('button', { name: 'Tirar da loja' }).click();
-    await expect(page.getByText('Tirar "Sabonete E2E de Alecrim" da loja?')).toBeVisible();
+    await expect(page.getByText(`Tirar "${productName}" da loja?`)).toBeVisible();
     await page.getByRole('button', { name: 'Sim, tirar da loja' }).click();
-    await expect(page.getByText('"Sabonete E2E de Alecrim" saiu da loja.')).toBeVisible();
+    await expect(page.getByText(`"${productName}" saiu da loja.`)).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Fora da loja' })).toBeVisible();
     await page.getByRole('button', { name: 'Desfazer' }).click();
     await expect(page.getByRole('heading', { name: 'Fora da loja' })).toHaveCount(0);
     await expect(
-      page
-        .getByRole('listitem')
-        .filter({ hasText: 'Sabonete E2E de Alecrim' })
-        .getByRole('button', {
-          name: 'Tirar da loja',
-        }),
+      page.getByRole('listitem').filter({ hasText: productName }).getByRole('button', {
+        name: 'Tirar da loja',
+      }),
     ).toBeVisible();
   });
 
@@ -206,6 +206,13 @@ test.describe('painel da vendedora', () => {
     const message = await waitForTelegram(/teste/);
     expect(message.chat_id).toBe('555000111');
     expect((await telegramMessages()).length).toBeGreaterThan(0);
+
+    // Put the seller's original setting back: other tests (and the other project) depend on it.
+    const restore = await page.request.put('/api/v1/admin/notifications/settings', {
+      headers: { Origin: E2E.webUrl },
+      data: { channel: 'telegram', enabled: true, destination: '987654321' },
+    });
+    expect(restore.ok()).toBe(true);
 
     await page.getByRole('button', { name: 'Sair do painel' }).click();
     await expect(page).toHaveURL(/\/painel\/entrar$/);

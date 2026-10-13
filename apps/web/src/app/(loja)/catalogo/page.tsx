@@ -33,26 +33,26 @@ export default async function CatalogPage({ searchParams }: { searchParams: Sear
   const aromas = [...new Set(all.map((p) => p.aroma).filter(Boolean))].sort();
 
   return (
-    <div className="grid gap-8 lg:grid-cols-[18rem_1fr]">
-      <aside>
-        <FilterBar ingredients={ingredients} aromas={aromas} active={active} />
-      </aside>
-      <section aria-labelledby="titulo">
-        <h1 id="titulo" className="mb-6 text-3xl text-sage-700">
-          Sabonetes
-        </h1>
-        {products.length === 0 ? (
-          <p>Nenhum sabonete encontrado com esses filtros.</p>
-        ) : (
-          <ul className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
-            {products.map((p) => (
-              <li key={p.id}>
-                <ProductCard product={p} />
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
+    <div className="space-y-6">
+      <h1 className="text-3xl text-sage-700">Sabonetes</h1>
+      <div className="grid gap-8 lg:grid-cols-[18rem_1fr]">
+        <aside>
+          <FilterBar ingredients={ingredients} aromas={aromas} active={active} />
+        </aside>
+        <section aria-label="Lista de sabonetes">
+          {products.length === 0 ? (
+            <p>Nenhum sabonete encontrado com esses filtros.</p>
+          ) : (
+            <ul className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
+              {products.map((p, i) => (
+                <li key={p.id}>
+                  <ProductCard product={p} priority={i < 2} />
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+      </div>
     </div>
   );
 }

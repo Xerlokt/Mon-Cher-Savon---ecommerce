@@ -4,8 +4,16 @@ on:
   push:
     branches: [main]
 
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
 jobs:
   verify:
+    name: Lint, types, unit tests, build
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -18,10 +26,64 @@ jobs:
         env: { GITHUB_TOKEN: '${{ secrets.GITHUB_TOKEN }}' }
       - run: pnpm lint
       - run: pnpm typecheck
+      # Fails below 90% coverage in domain and application (apps/api/vitest.config.ts).
       - run: pnpm test:cov
       - run: pnpm build
+        env:
+          API_URL: http://localhost:3001
+      - run: pnpm audit --prod --audit-level=high
+
+  integration:
+    name: Integration tests (Postgres via Testcontainers)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: pnpm }
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @mon-cher-savon/contracts build
+      - run: pnpm --filter @mon-cher-savon/api test:int
+
+  e2e:
+    name: E2E (Playwright, phone and desktop) and Lighthouse
+    runs-on: ubuntu-latest
+    needs: [verify]
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: savon
+          POSTGRES_PASSWORD: savon
+          POSTGRES_DB: postgres
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U savon" --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      E2E_DATABASE_URL: postgresql://savon:savon@localhost:5432/mon_cher_savon_e2e
+      CI: 'true'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: pnpm }
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @mon-cher-savon/contracts build && pnpm --filter @mon-cher-savon/ui-tokens build
+      - run: pnpm --filter @mon-cher-savon/e2e exec playwright install --with-deps chromium
+      - run: pnpm --filter @mon-cher-savon/e2e test
+      - run: pnpm --filter @mon-cher-savon/e2e lighthouse
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: e2e-reports
+          path: |
+            e2e/playwright-report
+            e2e/test-results
+            e2e/lighthouse-report.json
+          retention-days: 7
 
   codeql:
+    name: CodeQL
     runs-on: ubuntu-latest
     permissions: { security-events: write, contents: read }
     steps:

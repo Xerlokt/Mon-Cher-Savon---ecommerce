@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import Image from 'next/image';
 import { notFound } from 'next/navigation';
+import { AddToCartButton } from '@/features/carrinho/add-to-cart-button';
 import { getProduct } from '@/features/catalogo/api';
 import { formatPrice } from '@/shared/format';
 
@@ -79,6 +80,16 @@ export default async function ProductPage({ params }: { params: Params }) {
             Esgotado
           </p>
         ) : null}
+        <AddToCartButton
+          soldOut={product.soldOut}
+          product={{
+            productId: product.id,
+            slug: product.slug,
+            name: product.name,
+            priceCents: product.priceCents,
+            imageUrl: product.imageUrl,
+          }}
+        />
         <section aria-labelledby="descricao">
           <h2 id="descricao" className="text-xl text-sage-700">
             Sobre este sabonete

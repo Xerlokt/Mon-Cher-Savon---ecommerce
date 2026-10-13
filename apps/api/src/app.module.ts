@@ -24,13 +24,14 @@ import { OrderExpirationScheduler } from './infrastructure/scheduling/order-expi
 import { CatalogController } from './presentation/http/catalog.controller.js';
 import { DomainExceptionFilter } from './presentation/http/domain-exception.filter.js';
 import { OrdersController } from './presentation/http/orders.controller.js';
+import { ShippingController } from './presentation/http/shipping.controller.js';
 import { MP_WEBHOOK_SECRET, WebhooksController } from './presentation/http/webhooks.controller.js';
 
 const TX = 'TRANSACTIONAL_DB';
 const PAYMENT_GATEWAY = 'PAYMENT_GATEWAY';
 
 @Module({
-  controllers: [CatalogController, OrdersController, WebhooksController],
+  controllers: [CatalogController, OrdersController, ShippingController, WebhooksController],
   providers: [
     PrismaService,
     { provide: APP_FILTER, useClass: DomainExceptionFilter },

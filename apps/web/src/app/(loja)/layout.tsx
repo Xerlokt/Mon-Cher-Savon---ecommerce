@@ -1,10 +1,12 @@
 import Link from 'next/link';
+import { CartBottomBar, CartDrawer, CartLauncher } from '@/features/carrinho/cart-drawer';
+import { CartProvider } from '@/features/carrinho/cart-provider';
 
 const nav = [{ href: '/catalogo', label: 'Sabonetes' }];
 
 export default function LojaLayout({ children }: { children: React.ReactNode }) {
   return (
-    <>
+    <CartProvider>
       <a
         href="#conteudo"
         className="sr-only focus:not-sr-only focus:absolute focus:left-2 focus:top-2 focus:z-50 focus:rounded focus:bg-sage-700 focus:px-4 focus:py-2 focus:text-cream-50"
@@ -30,9 +32,10 @@ export default function LojaLayout({ children }: { children: React.ReactNode }) 
               ))}
             </ul>
           </nav>
+          <CartLauncher />
         </div>
       </header>
-      <main id="conteudo" className="mx-auto max-w-6xl px-4 py-8">
+      <main id="conteudo" className="mx-auto max-w-6xl px-4 py-8 pb-24 md:pb-8">
         {children}
       </main>
       <footer className="mt-12 bg-clay-100">
@@ -41,6 +44,8 @@ export default function LojaLayout({ children }: { children: React.ReactNode }) 
           <p>Sabonetes artesanais feitos à mão, em pequenos lotes.</p>
         </div>
       </footer>
-    </>
+      <CartDrawer />
+      <CartBottomBar />
+    </CartProvider>
   );
 }

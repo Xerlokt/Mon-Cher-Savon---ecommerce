@@ -1,0 +1,22 @@
+{
+  "name": "@mon-cher-savon/api",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "lint": "eslint src",
+    "test": "vitest run",
+    "test:cov": "vitest run --coverage"
+  },
+  "dependencies": {
+    "@mon-cher-savon/config": "workspace:*",
+    "@mon-cher-savon/contracts": "workspace:*"
+  },
+  "devDependencies": {
+    "@vitest/coverage-v8": "^2.1.3",
+    "@types/node": "^22.7.5",
+    "vitest": "^2.1.3"
+  }
+}

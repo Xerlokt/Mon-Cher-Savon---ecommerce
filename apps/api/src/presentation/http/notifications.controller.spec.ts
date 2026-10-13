@@ -1,83 +1,62 @@
-import 'reflect-metadata';
 import type { INestApplication } from '@nestjs/common';
-import { Test } from '@nestjs/testing';
 import request from 'supertest';
-import { afterAll, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import {
   GetNotificationSettingsUseCase,
   SendTestNotificationUseCase,
   UpdateNotificationSettingUseCase,
 } from '../../application/notification-settings.use-cases.js';
 import { FakeChannel, FakeNotificationSettings } from '../../application/testing/fakes.js';
-import { ADMIN_BOOTSTRAP_TOKEN, AdminGuard } from './admin.guard.js';
-import { DomainExceptionFilter } from './domain-exception.filter.js';
 import { NotificationsController } from './notifications.controller.js';
+import { ORIGIN, SESSION_COOKIE_HEADER, createAdminTestApp } from './testing/admin-test-app.js';
 
-const TOKEN = 'admin-secret-token';
 let settings: FakeNotificationSettings;
 let telegram: FakeChannel;
+let app: INestApplication;
 
-async function createApp(token: string): Promise<INestApplication> {
-  const moduleRef = await Test.createTestingModule({
-    controllers: [NotificationsController],
-    providers: [
-      AdminGuard,
-      { provide: ADMIN_BOOTSTRAP_TOKEN, useValue: token },
+const auth = { Cookie: SESSION_COOKIE_HEADER, Origin: ORIGIN };
+
+async function createApp(): Promise<INestApplication> {
+  return createAdminTestApp(
+    [NotificationsController],
+    [
       {
         provide: GetNotificationSettingsUseCase,
-        useFactory: () => new GetNotificationSettingsUseCase(settings, ['telegram']),
+        useValue: new GetNotificationSettingsUseCase(settings, ['telegram']),
       },
       {
         provide: UpdateNotificationSettingUseCase,
-        useFactory: () => new UpdateNotificationSettingUseCase(settings, ['telegram']),
+        useValue: new UpdateNotificationSettingUseCase(settings, ['telegram']),
       },
       {
         provide: SendTestNotificationUseCase,
-        useFactory: () => new SendTestNotificationUseCase([telegram], settings),
+        useValue: new SendTestNotificationUseCase([telegram], settings),
       },
     ],
-  }).compile();
-  const app = moduleRef.createNestApplication();
-  app.setGlobalPrefix('api/v1');
-  app.useGlobalFilters(new DomainExceptionFilter());
-  await app.init();
-  return app;
+  );
 }
-
-let app: INestApplication;
-const auth = { Authorization: `Bearer ${TOKEN}` };
 
 beforeEach(() => {
   settings = new FakeNotificationSettings();
   telegram = new FakeChannel('telegram');
 });
 
-afterAll(async () => {
+afterEach(async () => {
   await app?.close();
 });
 
 describe('admin notifications', () => {
-  it('rejects requests without or with the wrong token', async () => {
-    app = await createApp(TOKEN);
+  it('requires a seller session', async () => {
+    app = await createApp();
     await request(app.getHttpServer()).get('/api/v1/admin/notifications/settings').expect(401);
     await request(app.getHttpServer())
-      .get('/api/v1/admin/notifications/settings')
-      .set({ Authorization: 'Bearer nope' })
+      .post('/api/v1/admin/notifications/test')
+      .send({ channel: 'telegram' })
       .expect(401);
-    await app.close();
-  });
-
-  it('is closed entirely when no admin token is configured', async () => {
-    app = await createApp('');
-    await request(app.getHttpServer())
-      .get('/api/v1/admin/notifications/settings')
-      .set(auth)
-      .expect(403);
-    await app.close();
   });
 
   it('lists, updates and tests a channel', async () => {
-    app = await createApp(TOKEN);
+    app = await createApp();
     const server = app.getHttpServer();
 
     const list = await request(server)
@@ -103,12 +82,11 @@ describe('admin notifications', () => {
       .send({ channel: 'telegram' })
       .expect(200);
     expect(telegram.sent[0]?.destination).toBe('123456789');
-    await app.close();
   });
 
   it('validates input and explains business errors', async () => {
     settings = new FakeNotificationSettings([], { telegram: '' });
-    app = await createApp(TOKEN);
+    app = await createApp();
     const server = app.getHttpServer();
     await request(server)
       .put('/api/v1/admin/notifications/settings')
@@ -126,6 +104,5 @@ describe('admin notifications', () => {
       .set(auth)
       .send({ channel: 'telegram' })
       .expect(422);
-    await app.close();
   });
 });

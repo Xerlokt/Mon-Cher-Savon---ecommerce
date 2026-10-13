@@ -14,7 +14,11 @@ beforeAll(async () => {
     providers: [
       {
         provide: APP_CONFIG,
-        useValue: loadConfig({ PAYMENT_MODE: 'fake', SHIPPING_LOCAL_CENTS: '1200' }),
+        useValue: loadConfig({
+          PAYMENT_MODE: 'fake',
+          SESSION_SECRET: 'x'.repeat(40),
+          SHIPPING_LOCAL_CENTS: '1200',
+        }),
       },
     ],
   }).compile();

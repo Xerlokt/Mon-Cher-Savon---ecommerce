@@ -1,7 +1,14 @@
 import type { Order } from '../../domain/order/order.js';
 import type { Product } from '../../domain/product/product.js';
+import type { AdminProductView } from '@mon-cher-savon/contracts';
 import type {
+  AdminProductRepository,
+  AdminUserRecord,
+  AdminUserRepository,
   ChannelName,
+  LoginThrottle,
+  PasswordHasher,
+  SessionTokens,
   NotificationChannel,
   NotificationSetting,
   NotificationLogRepository,
@@ -179,5 +186,104 @@ export class FakeNotificationLog implements NotificationLogRepository {
   readonly records: Array<{ orderId: string; channels: string[]; ok: boolean[] }> = [];
   async record(orderId: string, channels: string[], results: PromiseSettledResult<void>[]) {
     this.records.push({ orderId, channels, ok: results.map((r) => r.status === 'fulfilled') });
+  }
+}
+
+export class InMemoryAdmins implements AdminUserRepository {
+  constructor(private readonly admins: AdminUserRecord[] = []) {}
+  async findByEmail(email: string) {
+    return this.admins.find((a) => a.email === email) ?? null;
+  }
+  async findById(id: string) {
+    return this.admins.find((a) => a.id === id) ?? null;
+  }
+}
+
+/** hash:<plain> — deterministic, only for tests. */
+export class FakePasswordHasher implements PasswordHasher {
+  async hash(plain: string) {
+    return `hash:${plain}`;
+  }
+  async verify(hash: string, plain: string) {
+    return hash === `hash:${plain}`;
+  }
+}
+
+export class FakeSessionTokens implements SessionTokens {
+  async issue(adminId: string, remember: boolean) {
+    return { token: `token:${adminId}`, maxAgeSeconds: remember ? 30 * 24 * 3600 : null };
+  }
+  async verify(token: string | undefined) {
+    return token?.startsWith('token:') ? { adminId: token.slice(6) } : null;
+  }
+}
+
+export class InMemoryLoginThrottle implements LoginThrottle {
+  private readonly failures = new Map<string, number>();
+  constructor(private readonly maxFailures = 5) {}
+  retryAfterSeconds(key: string) {
+    return (this.failures.get(key) ?? 0) >= this.maxFailures ? 900 : 0;
+  }
+  recordFailure(key: string) {
+    this.failures.set(key, (this.failures.get(key) ?? 0) + 1);
+  }
+  reset(key: string) {
+    this.failures.delete(key);
+  }
+}
+
+export class InMemoryAdminProducts implements AdminProductRepository {
+  private readonly products = new Map<string, AdminProductView>();
+  private readonly ingredientSlugs = new Set<string>();
+  private seq = 0;
+
+  async list() {
+    return [...this.products.values()];
+  }
+  async get(id: string) {
+    return this.products.get(id) ?? null;
+  }
+  async slugExists(slug: string) {
+    return [...this.products.values()].some((p) => p.slug === slug);
+  }
+  async create(data: Parameters<AdminProductRepository['create']>[0]) {
+    const view: AdminProductView = {
+      id: `ap${++this.seq}`,
+      slug: data.slug,
+      name: data.name,
+      description: data.description,
+      usage: data.usage,
+      aroma: data.aroma,
+      priceCents: data.priceCents,
+      weightGrams: data.weightGrams,
+      stock: data.stock,
+      lowStockThreshold: data.lowStockThreshold,
+      lowStock: data.stock <= data.lowStockThreshold,
+      status: 'ACTIVE',
+      images: data.images,
+      ingredientIds: data.ingredientIds,
+    };
+    this.products.set(view.id, view);
+    return view;
+  }
+  async update(id: string, patch: Parameters<AdminProductRepository['update']>[1]) {
+    const current = this.products.get(id);
+    if (!current) return null;
+    const next = { ...current, ...patch } as AdminProductView;
+    this.products.set(id, next);
+    return next;
+  }
+  async setStatus(id: string, status: 'ACTIVE' | 'ARCHIVED') {
+    const current = this.products.get(id);
+    if (!current) return false;
+    this.products.set(id, { ...current, status });
+    return true;
+  }
+  async createIngredient(data: { name: string; slug: string; benefit: string }) {
+    this.ingredientSlugs.add(data.slug);
+    return { id: `ing-${data.slug}`, ...data };
+  }
+  async slugExistsIngredient(slug: string) {
+    return this.ingredientSlugs.has(slug);
   }
 }

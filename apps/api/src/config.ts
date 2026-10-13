@@ -17,7 +17,16 @@ const schema = z.object({
     .enum(['true', 'false'])
     .default('true')
     .transform((v) => v === 'true'),
-  ADMIN_BOOTSTRAP_TOKEN: z.string().optional(),
+  SESSION_SECRET: z.string().min(32, 'SESSION_SECRET precisa ter pelo menos 32 caracteres'),
+  COOKIE_SECURE: z
+    .enum(['true', 'false'])
+    .optional()
+    .transform((v) => (v === undefined ? process.env['NODE_ENV'] === 'production' : v === 'true')),
+  TRUST_PROXY: z
+    .enum(['true', 'false'])
+    .default('false')
+    .transform((v) => v === 'true'),
+  UPLOAD_DIR: z.string().default('./uploads'),
   ORDER_EXPIRATION_MINUTES: z.coerce.number().int().min(5).default(30),
   SHIPPING_PICKUP_CENTS: z.coerce.number().int().min(0).default(0),
   SHIPPING_LOCAL_CENTS: z.coerce.number().int().min(0).default(1000),

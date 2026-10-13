@@ -36,7 +36,42 @@ import { PrismaProductRepository } from './infrastructure/prisma/prisma-product.
 import { PrismaService } from './infrastructure/prisma/prisma.service.js';
 import { TransactionalDb } from './infrastructure/prisma/transactional-db.js';
 import { OrderExpirationScheduler } from './infrastructure/scheduling/order-expiration.scheduler.js';
-import { ADMIN_BOOTSTRAP_TOKEN, AdminGuard } from './presentation/http/admin.guard.js';
+import { AdminAuthController, COOKIE_SECURE } from './presentation/http/admin-auth.controller.js';
+import {
+  ADMIN_ORDER_QUERY,
+  ADMIN_PRODUCT_REPOSITORY,
+  AdminCatalogSupportController,
+  AdminOrdersController,
+  AdminProductsController,
+  IMAGE_STORAGE,
+} from './presentation/http/admin-sales-products.controllers.js';
+import {
+  ADMIN_USERS,
+  ALLOWED_ORIGIN,
+  AdminGuard,
+  SESSION_TOKENS,
+} from './presentation/http/admin.guard.js';
+import { LoginUseCase } from './application/admin-auth.use-cases.js';
+import { ChangeOrderStatusUseCase } from './application/admin-orders.use-cases.js';
+import {
+  AdjustStockUseCase,
+  ArchiveProductUseCase,
+  CreateIngredientUseCase,
+  CreateProductUseCase,
+  RestoreProductUseCase,
+  UpdateProductUseCase,
+} from './application/admin-products.use-cases.js';
+import {
+  Argon2idHasher,
+  HmacSessionTokens,
+  InMemoryLoginThrottle,
+} from './infrastructure/security/security.js';
+import { LocalDiskImageStorage } from './infrastructure/storage/local-image-storage.js';
+import {
+  PrismaAdminOrderQuery,
+  PrismaAdminProductRepository,
+  PrismaAdminUsers,
+} from './infrastructure/prisma/prisma-admin.repositories.js';
 import { NotificationsController } from './presentation/http/notifications.controller.js';
 import { CatalogController } from './presentation/http/catalog.controller.js';
 import { DomainExceptionFilter } from './presentation/http/domain-exception.filter.js';
@@ -55,6 +90,10 @@ const CHANNELS = 'NOTIFICATION_CHANNELS';
     ShippingController,
     WebhooksController,
     NotificationsController,
+    AdminAuthController,
+    AdminOrdersController,
+    AdminProductsController,
+    AdminCatalogSupportController,
   ],
   providers: [
     PrismaService,
@@ -66,10 +105,103 @@ const CHANNELS = 'NOTIFICATION_CHANNELS';
       inject: [APP_CONFIG],
     },
     AdminGuard,
+    { provide: ALLOWED_ORIGIN, useFactory: (c: AppConfig) => c.WEB_ORIGIN, inject: [APP_CONFIG] },
+    { provide: COOKIE_SECURE, useFactory: (c: AppConfig) => c.COOKIE_SECURE, inject: [APP_CONFIG] },
     {
-      provide: ADMIN_BOOTSTRAP_TOKEN,
-      useFactory: (config: AppConfig) => config.ADMIN_BOOTSTRAP_TOKEN ?? '',
+      provide: SESSION_TOKENS,
+      useFactory: (c: AppConfig) => new HmacSessionTokens(c.SESSION_SECRET),
       inject: [APP_CONFIG],
+    },
+    {
+      provide: ADMIN_USERS,
+      useFactory: (prisma: PrismaService) => new PrismaAdminUsers(prisma),
+      inject: [PrismaService],
+    },
+    {
+      provide: LoginUseCase,
+      useFactory: async (prisma: PrismaService) => {
+        const hasher = new Argon2idHasher();
+        // Hash of a random password: verified when the email is unknown to keep timing uniform.
+        const decoy = await hasher.hash(`decoy-${Math.random()}`);
+        return new LoginUseCase(
+          new PrismaAdminUsers(prisma),
+          hasher,
+          new HmacSessionTokens(loadConfig().SESSION_SECRET),
+          new InMemoryLoginThrottle(),
+          decoy,
+        );
+      },
+      inject: [PrismaService],
+    },
+    {
+      provide: ADMIN_ORDER_QUERY,
+      useFactory: (prisma: PrismaService) => new PrismaAdminOrderQuery(prisma),
+      inject: [PrismaService],
+    },
+    {
+      provide: ADMIN_PRODUCT_REPOSITORY,
+      useFactory: (prisma: PrismaService) => new PrismaAdminProductRepository(prisma),
+      inject: [PrismaService],
+    },
+    {
+      provide: IMAGE_STORAGE,
+      useFactory: (c: AppConfig) => new LocalDiskImageStorage(c.UPLOAD_DIR),
+      inject: [APP_CONFIG],
+    },
+    {
+      provide: ChangeOrderStatusUseCase,
+      useFactory: (tx: TransactionalDb) => {
+        const products = new PrismaProductRepository(tx);
+        return new ChangeOrderStatusUseCase(
+          new PrismaOrderRepository(tx),
+          products,
+          products,
+          new PrismaStockMovements(tx),
+          tx,
+        );
+      },
+      inject: [TX],
+    },
+    {
+      provide: CreateProductUseCase,
+      useFactory: (prisma: PrismaService, tx: TransactionalDb) =>
+        new CreateProductUseCase(
+          new PrismaAdminProductRepository(prisma),
+          new PrismaStockMovements(tx),
+        ),
+      inject: [PrismaService, TX],
+    },
+    {
+      provide: UpdateProductUseCase,
+      useFactory: (prisma: PrismaService) =>
+        new UpdateProductUseCase(new PrismaAdminProductRepository(prisma)),
+      inject: [PrismaService],
+    },
+    {
+      provide: ArchiveProductUseCase,
+      useFactory: (prisma: PrismaService) =>
+        new ArchiveProductUseCase(new PrismaAdminProductRepository(prisma)),
+      inject: [PrismaService],
+    },
+    {
+      provide: RestoreProductUseCase,
+      useFactory: (prisma: PrismaService) =>
+        new RestoreProductUseCase(new PrismaAdminProductRepository(prisma)),
+      inject: [PrismaService],
+    },
+    {
+      provide: CreateIngredientUseCase,
+      useFactory: (prisma: PrismaService) =>
+        new CreateIngredientUseCase(new PrismaAdminProductRepository(prisma)),
+      inject: [PrismaService],
+    },
+    {
+      provide: AdjustStockUseCase,
+      useFactory: (tx: TransactionalDb) => {
+        const products = new PrismaProductRepository(tx);
+        return new AdjustStockUseCase(products, products, new PrismaStockMovements(tx), tx);
+      },
+      inject: [TX],
     },
     {
       provide: CHANNELS,

@@ -138,3 +138,63 @@ export interface CatalogQuery {
   getProductBySlug(slug: string): Promise<ProductDetail | null>;
   listIngredients(): Promise<IngredientView[]>;
 }
+
+export interface AdminUserRecord {
+  id: string;
+  email: string;
+  passwordHash: string;
+}
+
+export interface AdminUserRepository {
+  findByEmail(email: string): Promise<AdminUserRecord | null>;
+  findById(id: string): Promise<AdminUserRecord | null>;
+}
+
+export interface PasswordHasher {
+  hash(plain: string): Promise<string>;
+  verify(hash: string, plain: string): Promise<boolean>;
+}
+
+export interface SessionTokens {
+  issue(
+    adminId: string,
+    remember: boolean,
+  ): Promise<{ token: string; maxAgeSeconds: number | null }>;
+  verify(token: string | undefined): Promise<{ adminId: string } | null>;
+}
+
+export interface LoginThrottle {
+  /** Seconds until another attempt is allowed, or 0 when not blocked. */
+  retryAfterSeconds(key: string): number;
+  recordFailure(key: string): void;
+  reset(key: string): void;
+}
+
+export interface AdminOrderQuery {
+  list(status?: string): Promise<import('@mon-cher-savon/contracts').AdminOrderSummary[]>;
+  getByPublicCode(
+    code: string,
+  ): Promise<import('@mon-cher-savon/contracts').AdminOrderDetail | null>;
+}
+
+type ProductContent = Omit<import('@mon-cher-savon/contracts').ProductInput, 'stock'>;
+
+export interface AdminProductRepository {
+  list(): Promise<import('@mon-cher-savon/contracts').AdminProductView[]>;
+  get(id: string): Promise<import('@mon-cher-savon/contracts').AdminProductView | null>;
+  slugExists(slug: string): Promise<boolean>;
+  create(
+    data: ProductContent & { slug: string; stock: number },
+  ): Promise<import('@mon-cher-savon/contracts').AdminProductView>;
+  update(
+    id: string,
+    patch: Partial<ProductContent>,
+  ): Promise<import('@mon-cher-savon/contracts').AdminProductView | null>;
+  setStatus(id: string, status: 'ACTIVE' | 'ARCHIVED'): Promise<boolean>;
+  createIngredient(data: { name: string; slug: string; benefit: string }): Promise<IngredientView>;
+  slugExistsIngredient(slug: string): Promise<boolean>;
+}
+
+export interface ImageStorage {
+  save(data: Buffer, extension: 'jpg' | 'png' | 'webp'): Promise<{ url: string }>;
+}

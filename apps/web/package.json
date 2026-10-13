@@ -12,13 +12,14 @@
     "test:cov": "vitest run --coverage"
   },
   "dependencies": {
+    "@mon-cher-savon/contracts": "workspace:*",
     "@mon-cher-savon/ui-tokens": "workspace:*",
     "@radix-ui/react-dialog": "^1.1.2",
+    "@radix-ui/react-popover": "^1.3.1",
     "lucide-react": "^0.453.0",
     "next": "^15.0.0",
     "react": "^19.0.0",
-    "react-dom": "^19.0.0",
-    "@mon-cher-savon/contracts": "workspace:*"
+    "react-dom": "^19.0.0"
   },
   "devDependencies": {
     "@testing-library/jest-dom": "^6.6.2",

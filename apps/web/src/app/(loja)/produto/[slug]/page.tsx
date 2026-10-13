@@ -55,7 +55,7 @@ export default async function ProductPage({ params }: { params: Params }) {
               alt={i === 0 ? product.name : ''}
               fill
               priority={i === 0}
-              unoptimized={src.endsWith('.svg')}
+              unoptimized={src.endsWith('.svg') || src.startsWith('/uploads')}
               sizes="(min-width: 768px) 50vw, 100vw"
               className="object-cover"
             />

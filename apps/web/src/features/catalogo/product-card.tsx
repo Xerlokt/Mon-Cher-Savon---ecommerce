@@ -12,7 +12,9 @@ export function ProductCard({ product }: { product: ProductSummary }) {
             src={product.imageUrl}
             alt=""
             fill
-            unoptimized={product.imageUrl.endsWith('.svg')}
+            unoptimized={
+              product.imageUrl.endsWith('.svg') || product.imageUrl.startsWith('/uploads')
+            }
             sizes="(min-width: 1024px) 25vw, (min-width: 768px) 50vw, 100vw"
             className="object-cover transition-transform duration-300 group-hover:scale-105 motion-reduce:transition-none"
           />

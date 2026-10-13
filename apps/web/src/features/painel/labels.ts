@@ -48,3 +48,13 @@ export function formatDateTime(iso: string): string {
     timeZone: 'America/Sao_Paulo',
   });
 }
+
+const WEEKDAYS = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sáb'];
+
+/** "2026-03-18" -> "qua 18/03" (the date is a calendar day, so no time zone math). */
+export function formatDayLabel(day: string): string {
+  const [year, month, date] = day.split('-').map(Number);
+  if (!year || !month || !date) return day;
+  const weekday = WEEKDAYS[new Date(Date.UTC(year, month - 1, date)).getUTCDay()];
+  return `${weekday} ${String(date).padStart(2, '0')}/${String(month).padStart(2, '0')}`;
+}

@@ -21,3 +21,12 @@ describe('labels', () => {
     expect(formatDateTime('2026-01-02T15:30:00.000Z').replace(/\s/g, ' ')).toMatch(/02\/01.*12:30/);
   });
 });
+
+describe('formatDayLabel', () => {
+  it('shows the weekday and day/month', async () => {
+    const { formatDayLabel } = await import('./labels');
+    expect(formatDayLabel('2026-03-18')).toBe('qua 18/03');
+    expect(formatDayLabel('2026-01-04')).toBe('dom 04/01');
+    expect(formatDayLabel('lixo')).toBe('lixo');
+  });
+});

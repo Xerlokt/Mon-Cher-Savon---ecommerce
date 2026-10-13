@@ -1,5 +1,10 @@
-import type { AdminOrderSummary, AdminProductView } from '@mon-cher-savon/contracts';
+import type {
+  AdminOrderSummary,
+  AdminProductView,
+  DashboardMetrics,
+} from '@mon-cher-savon/contracts';
 import Link from 'next/link';
+import { DashboardSection } from '@/features/painel/dashboard-section';
 import { OrderActions } from '@/features/painel/order-actions';
 import { adminGet } from '@/features/painel/server-api';
 import { StockStepper } from '@/features/painel/stock-stepper';
@@ -11,10 +16,12 @@ export const metadata = { title: 'Início' };
 export default async function PainelHome() {
   let toShip: AdminOrderSummary[];
   let products: AdminProductView[];
+  let dashboard: DashboardMetrics;
   try {
-    [toShip, products] = await Promise.all([
+    [toShip, products, dashboard] = await Promise.all([
       adminGet<AdminOrderSummary[]>('/admin/orders?status=PAID'),
       adminGet<AdminProductView[]>('/admin/products'),
+      adminGet<DashboardMetrics>('/admin/dashboard?period=hoje'),
     ]);
   } catch {
     return (
@@ -29,6 +36,8 @@ export default async function PainelHome() {
   return (
     <>
       <PageTitle>Olá! Veja como está a loja</PageTitle>
+
+      <DashboardSection initial={dashboard} />
 
       <PanelCard
         id="enviar"

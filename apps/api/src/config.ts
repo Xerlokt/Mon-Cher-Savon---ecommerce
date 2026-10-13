@@ -7,6 +7,8 @@ const schema = z.object({
   PAYMENT_MODE: z.enum(['mercadopago', 'fake']).default('mercadopago'),
   MERCADOPAGO_ACCESS_TOKEN: z.string().optional(),
   MERCADOPAGO_WEBHOOK_SECRET: z.string().optional(),
+  /** Override only for tests (a local mock of the Mercado Pago API). */
+  MERCADOPAGO_API_BASE_URL: z.string().optional(),
   TELEGRAM_BOT_TOKEN: z.string().optional(),
   TELEGRAM_API_BASE_URL: z.string().optional(),
   WHATSAPP_CLOUD_TOKEN: z.string().optional(),
@@ -27,6 +29,10 @@ const schema = z.object({
     .default('false')
     .transform((v) => v === 'true'),
   UPLOAD_DIR: z.string().default('./uploads'),
+  ENABLE_DOCS: z
+    .enum(['true', 'false'])
+    .optional()
+    .transform((v) => (v === undefined ? process.env['NODE_ENV'] !== 'production' : v === 'true')),
   ORDER_EXPIRATION_MINUTES: z.coerce.number().int().min(5).default(30),
   SHIPPING_PICKUP_CENTS: z.coerce.number().int().min(0).default(0),
   SHIPPING_LOCAL_CENTS: z.coerce.number().int().min(0).default(1000),

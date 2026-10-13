@@ -4,7 +4,7 @@ const API_URL = process.env['API_URL'] ?? 'http://localhost:3001';
 
 async function get<T>(path: string): Promise<T | null> {
   try {
-    const res = await fetch(`${API_URL}/api/v1${path}`, { next: { revalidate: 60 } });
+    const res = await fetch(`${API_URL}/api/v1${path}`, { next: { revalidate: 15 } });
     if (res.status === 404) return null;
     if (!res.ok) throw new Error(`API ${res.status}`);
     return (await res.json()) as T;

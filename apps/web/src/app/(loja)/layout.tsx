@@ -2,7 +2,10 @@ import Link from 'next/link';
 import { CartBottomBar, CartDrawer, CartLauncher } from '@/features/carrinho/cart-drawer';
 import { CartProvider } from '@/features/carrinho/cart-provider';
 
-const nav = [{ href: '/catalogo', label: 'Sabonetes' }];
+const nav = [
+  { href: '/catalogo', label: 'Sabonetes' },
+  { href: '/sobre', label: 'A artesã' },
+];
 
 export default function LojaLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -14,11 +17,11 @@ export default function LojaLayout({ children }: { children: React.ReactNode }) 
         Pular para o conteúdo
       </a>
       <header className="border-b border-clay-100 bg-cream-50/90 backdrop-blur">
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
+        <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-x-2 px-4 py-2 md:py-3">
           <Link href="/" className="font-heading text-2xl text-sage-700">
             Mon Cher Savon
           </Link>
-          <nav aria-label="Principal">
+          <nav aria-label="Principal" className="order-last w-full md:order-none md:w-auto">
             <ul className="flex gap-1">
               {nav.map((item) => (
                 <li key={item.href}>
@@ -42,6 +45,17 @@ export default function LojaLayout({ children }: { children: React.ReactNode }) 
         <div className="mx-auto max-w-6xl space-y-2 px-4 py-8 text-sm">
           <p className="font-heading text-lg text-sage-700">Mon Cher Savon</p>
           <p>Sabonetes artesanais feitos à mão, em pequenos lotes.</p>
+          <p className="flex flex-wrap gap-x-4">
+            <Link
+              href="/politicas/privacidade"
+              className="inline-flex min-h-11 items-center underline"
+            >
+              Privacidade
+            </Link>
+            <Link href="/politicas/trocas" className="inline-flex min-h-11 items-center underline">
+              Trocas e devoluções
+            </Link>
+          </p>
         </div>
       </footer>
       <CartDrawer />

@@ -16,7 +16,15 @@ const contrast = (a: string, b: string): number => {
 describe('ui-tokens', () => {
   it('names the brand', () => expect(brand.name).toBe('Mon Cher Savon'));
   it.each(['sage700', 'terracotta600', 'ink900', 'success', 'warning', 'danger'] as const)(
-    '%s passes WCAG AA on cream background',
-    (token) => expect(contrast(colors[token], colors.cream50)).toBeGreaterThanOrEqual(4.5),
+    '%s passes WCAG AA as text on the cream page and on clay cards',
+    (token) => {
+      expect(contrast(colors[token], colors.cream50)).toBeGreaterThanOrEqual(4.5);
+      expect(contrast(colors[token], colors.clay100)).toBeGreaterThanOrEqual(4.5);
+    },
   );
+
+  it('cream text passes AA on the filled primary and terracotta buttons', () => {
+    expect(contrast(colors.cream50, colors.sage700)).toBeGreaterThanOrEqual(4.5);
+    expect(contrast(colors.cream50, colors.terracotta600)).toBeGreaterThanOrEqual(4.5);
+  });
 });

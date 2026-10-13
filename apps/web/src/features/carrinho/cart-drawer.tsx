@@ -5,7 +5,7 @@ import { Minus, Plus, ShoppingBag, Trash2, X } from 'lucide-react';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { formatPrice } from '@/shared/format';
-import { PUBLIC_API_URL } from '@/shared/api-url';
+import { apiBase } from '@/shared/api-url';
 import { useCart } from './cart-provider';
 
 /** Product ids that are sold out or no longer sold, according to the API. */
@@ -15,7 +15,7 @@ function useUnavailable(enabled: boolean, ids: string[]): Set<string> {
   useEffect(() => {
     if (!enabled || ids.length === 0) return;
     let cancelled = false;
-    fetch(`${PUBLIC_API_URL}/api/v1/products`)
+    fetch(`${apiBase()}/api/v1/products`)
       .then((res) => (res.ok ? res.json() : null))
       .then((list: Array<{ id: string; soldOut: boolean }> | null) => {
         if (cancelled || !list) return;

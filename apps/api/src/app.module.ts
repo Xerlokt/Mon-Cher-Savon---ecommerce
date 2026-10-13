@@ -304,6 +304,9 @@ const CHANNELS = 'NOTIFICATION_CHANNELS';
           ? new FakePaymentGateway()
           : new MercadoPagoGateway({
               accessToken: config.MERCADOPAGO_ACCESS_TOKEN ?? '',
+              ...(config.MERCADOPAGO_API_BASE_URL
+                ? { baseUrl: config.MERCADOPAGO_API_BASE_URL }
+                : {}),
               notificationUrl: `${config.API_PUBLIC_URL}/api/v1/webhooks/mercadopago`,
               pixExpirationMinutes: config.ORDER_EXPIRATION_MINUTES,
             }),

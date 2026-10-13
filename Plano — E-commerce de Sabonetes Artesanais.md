@@ -2,6 +2,40 @@
 
 Oct 13, 2026 · @Gian Carlo
 
+## Status atual e próximos passos (atualizado em 13/10/2026)
+
+**Nome da loja: Mon Cher Savon** (o nome provisório "sabonetaria" foi trocado em todo o projeto).
+
+**Etapas 0 a 7 do código estão feitas.** Monorepo `pnpm` + Turborepo, API NestJS (Clean Architecture), web Next.js (vitrine + `/painel`), contratos Zod, tokens de design. Verificado: 174 testes unitários na API (98% de cobertura em domínio e aplicação), 129 no web, 22 de integração com Postgres real, 24 E2E com Playwright (celular e desktop, com axe) e Lighthouse (celular, 4G simulado) com desempenho 96–99, acessibilidade 100, SEO 100 e LCP em torno de 2,0 s.
+
+Onde achar as coisas: `README.md` (rodar e testar), `docs/deploy.md`, `docs/launch-checklist.md`, `docs/notifications.md`, `docs/adr/0001–0005`, `.github/workflows/` (CI, deploy, reset da demo), `e2e/` (Playwright + Lighthouse + mocks locais).
+
+### Como retomar
+1. `pnpm install` (se aparecer `EPERM` no `prisma generate`, feche servidores `node` abertos e rode `pnpm --filter @mon-cher-savon/api exec prisma generate`).
+2. `docker compose up -d`, copie `.env.example` para `.env` (precisa de `SESSION_SECRET` com 32+ caracteres; use `PAYMENT_MODE=fake` para ver a interface sem credenciais).
+3. `pnpm --filter @mon-cher-savon/api db:deploy && ... db:seed` e crie a vendedora com `ADMIN_EMAIL=... ADMIN_PASSWORD=... pnpm --filter @mon-cher-savon/api db:seed-admin`.
+4. `pnpm dev` (web :3000, API :3001). Testes: `pnpm test:cov`, `pnpm --filter @mon-cher-savon/api test:int`, `pnpm --filter @mon-cher-savon/e2e test`, `... lighthouse`.
+
+Regras que valem para a próxima sessão: commits convencionais com assunto em minúsculas (o commitlint recusa o resto), TDD (teste primeiro), nenhum segredo no Git, nenhum teste chama serviço real. O Prisma bloqueia `migrate reset` quando rodado por IA: não contornar, pedir consentimento ao usuário. O banco de E2E (`mon_cher_savon_e2e`) é só dele e o script recusa qualquer outro.
+
+### O que falta (em ordem sugerida)
+**Código que dá para fazer na próxima sessão**
+1. **Fotos em produção:** trocar o disco local (`LocalDiskImageStorage`) por um adaptador de Cloudinary ou Cloudflare R2 com upload assinado, atrás da porta `ImageStorage` (hoje as fotos ficam em `/uploads` no servidor).
+2. **Pagamento no cartão na tela:** a API já aceita cartão (`cardToken` + `cardPaymentMethodId`); falta a tela com MercadoPago.js e a chave pública. Precisa de credenciais de sandbox.
+3. **Teste contra o sandbox real do Mercado Pago** (hoje o adaptador só foi testado com HTTP simulado) e contra um bot real do Telegram.
+4. **Screenshots e GIF para o README** (o banner e as imagens não foram gerados), e o protótipo no Figma validado com a vendedora.
+5. **Enxugar a imagem Docker da API** (1,05 GB) e, se houver mais de uma instância, trocar os limites de login e de pedidos (hoje em memória) por um armazenamento compartilhado.
+6. Opcional: dashboard com intervalo de datas livre (hoje só hoje, 7 dias e este mês) e reembolso pelo painel (hoje é manual no Mercado Pago).
+
+**Depende de uma pessoa** (lista completa em `docs/launch-checklist.md`)
+- Contas e deploy: Mercado Pago de produção, bot do Telegram, Vercel, Render, banco (Neon/Supabase), domínio `.com.br`; variáveis `DEPLOY_ENABLED` e secrets do GitHub.
+- GitHub: branch `main` protegida (PR + CI verde), secret scanning e push protection, relatório privado de vulnerabilidade; trocar `OWNER` no badge do README.
+- Revisão jurídica das políticas de privacidade e de trocas (são rascunhos); textos e fotos reais da vendedora; `NEXT_PUBLIC_CONTACT_EMAIL` real.
+- **Teste de usabilidade com a vendedora** (3 tarefas cronometradas: cadastrar um sabonete, marcar uma venda como enviada, descobrir o mais vendido) e ajustes do que travar.
+- Primeira venda real de ponta a ponta (Pix) e rotação de todos os tokens usados nos testes.
+
+---
+
 ## Visão geral
 
 Uma loja online de sabonetes artesanais com duas áreas: a vitrine para clientes e um painel simples para a vendedora, que recebe um aviso no Telegram ou WhatsApp a cada venda. Como o repositório será público e serve de portfólio, código, testes e documentação seguem o padrão de um time profissional.

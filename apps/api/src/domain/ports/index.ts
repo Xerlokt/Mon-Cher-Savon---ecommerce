@@ -72,3 +72,41 @@ export interface StockMovementRepository {
 export interface OutboxRepository {
   add(event: { type: string; payload: Record<string, unknown> }): Promise<void>;
 }
+
+export interface IngredientView {
+  id: string;
+  slug: string;
+  name: string;
+  benefit: string;
+}
+
+export interface ProductSummary {
+  id: string;
+  slug: string;
+  name: string;
+  priceCents: number;
+  aroma: string;
+  imageUrl: string | null;
+  soldOut: boolean;
+}
+
+export interface ProductDetail extends ProductSummary {
+  description: string;
+  usage: string;
+  weightGrams: number;
+  images: string[];
+  ingredients: IngredientView[];
+}
+
+export interface CatalogFilter {
+  ingredient?: string;
+  aroma?: string;
+  benefit?: string;
+}
+
+/** Read model for the storefront (CQRS-lite): returns DTOs, never entities. */
+export interface CatalogQuery {
+  listProducts(filter: CatalogFilter): Promise<ProductSummary[]>;
+  getProductBySlug(slug: string): Promise<ProductDetail | null>;
+  listIngredients(): Promise<IngredientView[]>;
+}

@@ -1,0 +1,157 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum ProductStatus {
+  ACTIVE
+  ARCHIVED
+}
+
+enum OrderStatus {
+  AWAITING_PAYMENT
+  PAID
+  SHIPPED
+  DELIVERED
+  CANCELLED
+}
+
+enum PaymentMethod {
+  PIX
+  CARD
+}
+
+enum StockReason {
+  SALE
+  RESTOCK
+  ADJUSTMENT
+}
+
+enum OutboxStatus {
+  PENDING
+  SENT
+  FAILED
+}
+
+model Product {
+  id                String              @id @default(uuid())
+  slug              String              @unique
+  name              String
+  description       String              @default("")
+  usage             String              @default("")
+  aroma             String              @default("")
+  priceCents        Int
+  weightGrams       Int                 @default(100)
+  stock             Int                 @default(0)
+  lowStockThreshold Int                 @default(3)
+  status            ProductStatus       @default(ACTIVE)
+  images            String[]
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+  ingredients       ProductIngredient[]
+  orderItems        OrderItem[]
+  movements         StockMovement[]
+
+  @@index([status])
+}
+
+model Ingredient {
+  id       String              @id @default(uuid())
+  slug     String              @unique
+  name     String
+  benefit  String
+  products ProductIngredient[]
+}
+
+model ProductIngredient {
+  productId    String
+  ingredientId String
+  product      Product    @relation(fields: [productId], references: [id], onDelete: Cascade)
+  ingredient   Ingredient @relation(fields: [ingredientId], references: [id], onDelete: Cascade)
+
+  @@id([productId, ingredientId])
+}
+
+model Order {
+  id            String          @id @default(uuid())
+  publicCode    String          @unique
+  status        OrderStatus     @default(AWAITING_PAYMENT)
+  customerName  String
+  phone         String
+  email         String
+  cep           String
+  street        String
+  number        String
+  district      String
+  city          String
+  state         String
+  complement    String?
+  shippingCents Int
+  paidAt        DateTime?
+  createdAt     DateTime        @default(now())
+  items         OrderItem[]
+  payments      Payment[]
+  movements     StockMovement[]
+
+  @@index([status])
+}
+
+model OrderItem {
+  id             String  @id @default(uuid())
+  orderId        String
+  productId      String
+  productName    String
+  unitPriceCents Int
+  quantity       Int
+  order          Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product        Product @relation(fields: [productId], references: [id])
+}
+
+model Payment {
+  id                String        @id @default(uuid())
+  orderId           String
+  provider          String
+  providerPaymentId String        @unique
+  method            PaymentMethod
+  status            String
+  order             Order         @relation(fields: [orderId], references: [id])
+}
+
+model StockMovement {
+  id        String      @id @default(uuid())
+  productId String
+  delta     Int
+  reason    StockReason
+  orderId   String?
+  createdAt DateTime    @default(now())
+  product   Product     @relation(fields: [productId], references: [id])
+  order     Order?      @relation(fields: [orderId], references: [id])
+}
+
+model OutboxEvent {
+  id            String       @id @default(uuid())
+  type          String
+  payload       Json
+  status        OutboxStatus @default(PENDING)
+  attempts      Int          @default(0)
+  nextAttemptAt DateTime     @default(now())
+  createdAt     DateTime     @default(now())
+
+  @@index([status, nextAttemptAt])
+}
+
+model NotificationSetting {
+  channel     String  @id
+  enabled     Boolean @default(false)
+  destination String  @default("")
+}
+
+model AdminUser {
+  id           String @id @default(uuid())
+  email        String @unique
+  passwordHash String
+}

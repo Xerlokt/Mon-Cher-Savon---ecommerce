@@ -1,6 +1,12 @@
 {
   "extends": "@mon-cher-savon/config/tsconfig.base.json",
-  "compilerOptions": { "outDir": "dist", "rootDir": "src", "types": ["node"] },
-  "include": ["src"],
+  "compilerOptions": {
+    "outDir": "dist",
+    "rootDir": ".",
+    "types": ["node"],
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true
+  },
+  "include": ["src", "prisma"],
   "exclude": ["src/**/*.spec.ts"]
 }

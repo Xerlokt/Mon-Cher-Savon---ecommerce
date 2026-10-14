@@ -73,6 +73,31 @@ describe('GET /admin/dashboard', () => {
     expect(month.body.salesByDay).toHaveLength(18);
   });
 
+  it('answers a custom date range', async () => {
+    const res = await request(await create())
+      .get('/api/v1/admin/dashboard?period=personalizado&from=2026-03-10&to=2026-03-18')
+      .set(auth)
+      .expect(200);
+    expect(res.body).toMatchObject({
+      period: 'personalizado',
+      from: '2026-03-10',
+      to: '2026-03-18',
+    });
+    expect(res.body.salesByDay).toHaveLength(9);
+  });
+
+  it.each([
+    'period=personalizado',
+    'period=personalizado&from=2026-03-18&to=2026-03-10',
+    'period=personalizado&from=2024-01-01&to=2026-03-10',
+    'period=personalizado&from=abc&to=2026-03-10',
+  ])('rejects an invalid custom range (%s)', async (qs) => {
+    await request(await create())
+      .get(`/api/v1/admin/dashboard?${qs}`)
+      .set(auth)
+      .expect(400);
+  });
+
   it('rejects unknown periods', async () => {
     await request(await create())
       .get('/api/v1/admin/dashboard?period=ano')

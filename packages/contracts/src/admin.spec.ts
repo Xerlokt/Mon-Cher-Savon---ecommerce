@@ -44,9 +44,22 @@ describe('admin contracts', () => {
 });
 
 describe('dashboard period', () => {
-  it('accepts only the three presets', async () => {
+  it('accepts only the presets and the custom range', async () => {
     const { dashboardPeriodSchema } = await import('./admin.js');
     expect(dashboardPeriodSchema.safeParse('7dias').success).toBe(true);
+    expect(dashboardPeriodSchema.safeParse('personalizado').success).toBe(true);
     expect(dashboardPeriodSchema.safeParse('ano').success).toBe(false);
+  });
+
+  it('validates a custom date range', async () => {
+    const { dashboardRangeSchema } = await import('./admin.js');
+    const ok = (from: string, to: string) => dashboardRangeSchema.safeParse({ from, to }).success;
+    expect(ok('2026-03-01', '2026-03-18')).toBe(true);
+    expect(ok('2026-03-01', '2026-03-01')).toBe(true);
+    // order, impossible dates, wrong format and the one-year limit
+    expect(ok('2026-03-18', '2026-03-01')).toBe(false);
+    expect(ok('2026-02-30', '2026-03-01')).toBe(false);
+    expect(ok('18/03/2026', '2026-03-20')).toBe(false);
+    expect(ok('2024-01-01', '2026-03-01')).toBe(false);
   });
 });

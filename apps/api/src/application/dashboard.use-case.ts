@@ -1,4 +1,4 @@
-import type { DashboardMetrics, DashboardPeriod } from '@mon-cher-savon/contracts';
+import type { DashboardMetrics, DashboardPeriod, DashboardRange } from '@mon-cher-savon/contracts';
 import type { DashboardQuery } from '../domain/ports/index.js';
 
 /** Brazil has no daylight saving time since 2019, so São Paulo is a fixed UTC-3. */
@@ -23,9 +23,20 @@ function todayDateStamp(now: Date): number {
   return Date.UTC(local.getUTCFullYear(), local.getUTCMonth(), local.getUTCDate());
 }
 
-export function resolvePeriod(period: DashboardPeriod, now: Date): ResolvedPeriod {
-  const today = todayDateStamp(now);
+const stampOf = (day: string): number => Date.parse(`${day}T00:00:00Z`);
+
+export function resolvePeriod(
+  period: DashboardPeriod,
+  now: Date,
+  range?: DashboardRange,
+): ResolvedPeriod {
+  let today = todayDateStamp(now);
   let first = today;
+  if (period === 'personalizado') {
+    if (!range) throw new Error('Informe o intervalo de datas');
+    first = stampOf(range.from);
+    today = stampOf(range.to);
+  }
   if (period === '7dias') first = today - 6 * DAY_MS;
   if (period === 'mes') {
     const d = new Date(today);
@@ -45,8 +56,8 @@ export class GetDashboardUseCase {
     private readonly now: () => Date = () => new Date(),
   ) {}
 
-  async execute(period: DashboardPeriod): Promise<DashboardMetrics> {
-    const resolved = resolvePeriod(period, this.now());
+  async execute(period: DashboardPeriod, range?: DashboardRange): Promise<DashboardMetrics> {
+    const resolved = resolvePeriod(period, this.now(), range);
     const raw = await this.query.aggregate(resolved.from, resolved.to);
 
     const byDay = new Map(raw.byDay.map((d) => [d.day, d]));

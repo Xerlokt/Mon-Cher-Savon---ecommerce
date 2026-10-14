@@ -98,8 +98,30 @@ export interface AdminOrderDetail extends AdminOrderSummary {
   items: Array<{ productName: string; quantity: number; unitPriceCents: number }>;
 }
 
-export const dashboardPeriodSchema = z.enum(['hoje', '7dias', 'mes']);
+export const dashboardPeriodSchema = z.enum(['hoje', '7dias', 'mes', 'personalizado']);
 export type DashboardPeriod = z.infer<typeof dashboardPeriodSchema>;
+
+const MAX_RANGE_DAYS = 366;
+const isoDay = z
+  .string()
+  .regex(/^\d{4}-\d{2}-\d{2}$/)
+  .refine((v) => {
+    const t = Date.parse(`${v}T00:00:00Z`);
+    // Refinements still run after a failed regex, so guard against unparsable input.
+    return !Number.isNaN(t) && new Date(t).toISOString().slice(0, 10) === v;
+  }, 'Data inválida');
+
+/** Custom dashboard range: calendar days (YYYY-MM-DD, São Paulo), first <= last, at most a year. */
+export const dashboardRangeSchema = z
+  .object({ from: isoDay, to: isoDay })
+  .refine((r) => r.from <= r.to, { message: 'A data inicial vem antes da final' })
+  .refine(
+    (r) =>
+      (Date.parse(`${r.to}T00:00:00Z`) - Date.parse(`${r.from}T00:00:00Z`)) / 86_400_000 <
+      MAX_RANGE_DAYS,
+    { message: 'O intervalo pode ter no máximo um ano' },
+  );
+export type DashboardRange = z.infer<typeof dashboardRangeSchema>;
 
 export interface DashboardMetrics {
   period: DashboardPeriod;

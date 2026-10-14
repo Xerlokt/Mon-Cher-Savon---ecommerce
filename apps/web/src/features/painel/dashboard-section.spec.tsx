@@ -116,8 +116,58 @@ describe('DashboardSection', () => {
     expect(screen.getByText(/os campeões aparecem aqui/)).toBeInTheDocument();
   });
 
+  it('lets the seller pick any dates and shows the daily bars', async () => {
+    const custom = {
+      ...week,
+      period: 'personalizado' as const,
+      from: '2026-03-01',
+      to: '2026-03-18',
+    };
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue({ ok: true, status: 200, json: async () => custom });
+    vi.stubGlobal('fetch', fetchMock);
+    render(<DashboardSection initial={base} />);
+
+    const open = screen.getByRole('button', { name: 'Escolher datas' });
+    expect(open).toHaveAttribute('aria-expanded', 'false');
+    await userEvent.click(open);
+    await userEvent.type(screen.getByLabelText('De'), '2026-03-01');
+    await userEvent.type(screen.getByLabelText('Até'), '2026-03-18');
+    await userEvent.click(screen.getByRole('button', { name: 'Ver vendas' }));
+
+    await waitFor(() =>
+      expect(screen.getByText(/Você vendeu de 01\/03 a 18\/03/)).toBeInTheDocument(),
+    );
+    expect(fetchMock.mock.calls[0]?.[0]).toBe(
+      '/api/v1/admin/dashboard?period=personalizado&from=2026-03-01&to=2026-03-18',
+    );
+    expect(screen.getByRole('button', { name: 'Escolher datas' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
+    expect(screen.getByRole('list', { name: 'Vendas por dia' })).toBeInTheDocument();
+  });
+
+  it('explains a wrong range without calling the server', async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
+    render(<DashboardSection initial={base} />);
+    await userEvent.click(screen.getByRole('button', { name: 'Escolher datas' }));
+
+    await userEvent.click(screen.getByRole('button', { name: 'Ver vendas' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent('Escolha as duas datas');
+
+    await userEvent.type(screen.getByLabelText('De'), '2026-03-18');
+    await userEvent.type(screen.getByLabelText('Até'), '2026-03-01');
+    await userEvent.click(screen.getByRole('button', { name: 'Ver vendas' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent('antes da data final');
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
   it('has no accessibility violations', async () => {
     const { container } = render(<DashboardSection initial={week} />);
+    await userEvent.click(screen.getByRole('button', { name: 'Escolher datas' }));
     expect(await axe(container)).toHaveNoViolations();
   });
 });

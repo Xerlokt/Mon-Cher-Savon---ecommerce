@@ -33,6 +33,19 @@ describe('resolvePeriod', () => {
   });
 });
 
+describe('resolvePeriod (custom range)', () => {
+  it('covers exactly the chosen days, in São Paulo time', () => {
+    const p = resolvePeriod('personalizado', now, { from: '2026-02-27', to: '2026-03-02' });
+    expect(p.days).toEqual(['2026-02-27', '2026-02-28', '2026-03-01', '2026-03-02']);
+    expect(p.from.toISOString()).toBe('2026-02-27T03:00:00.000Z');
+    expect(p.to.toISOString()).toBe('2026-03-03T03:00:00.000Z');
+  });
+
+  it('requires a range', () => {
+    expect(() => resolvePeriod('personalizado', now)).toThrow(/intervalo/i);
+  });
+});
+
 const raw = (overrides: Partial<DashboardRaw> = {}): DashboardRaw => ({
   byDay: [],
   topProducts: [],
@@ -80,6 +93,25 @@ describe('GetDashboardUseCase', () => {
     expect(result.topProducts[0]?.name).toBe('Lavanda');
     expect(result.lowStock).toHaveLength(1);
     expect(calls[0]?.from.toISOString()).toBe('2026-03-12T03:00:00.000Z');
+  });
+
+  it('answers a custom range with its own first and last day', async () => {
+    const { query, calls } = queryReturning(
+      raw({ byDay: [{ day: '2026-03-02', salesCount: 1, revenueCents: 5000 }] }),
+    );
+    const result = await new GetDashboardUseCase(query, () => now).execute('personalizado', {
+      from: '2026-03-01',
+      to: '2026-03-03',
+    });
+    expect(result).toMatchObject({
+      period: 'personalizado',
+      from: '2026-03-01',
+      to: '2026-03-03',
+      salesCount: 1,
+      revenueCents: 5000,
+    });
+    expect(result.salesByDay).toHaveLength(3);
+    expect(calls[0]?.to.toISOString()).toBe('2026-03-04T03:00:00.000Z');
   });
 
   it('returns zeros, not NaN, when there were no sales', async () => {

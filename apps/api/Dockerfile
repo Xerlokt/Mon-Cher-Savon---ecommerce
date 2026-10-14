@@ -1,5 +1,5 @@
 # Build from the repository root:  docker build -f apps/api/Dockerfile -t mon-cher-savon-api .
-FROM node:22-bookworm-slim AS base
+FROM node:25-bookworm-slim AS base
 ENV PNPM_HOME=/pnpm
 ENV PATH=$PNPM_HOME:$PATH
 RUN corepack enable && apt-get update && apt-get install -y --no-install-recommends openssl ca-certificates \

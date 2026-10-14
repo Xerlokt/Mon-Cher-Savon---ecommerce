@@ -1,5 +1,7 @@
 # Mon Cher Savon
 
+![Mon Cher Savon: sabonetes artesanais](docs/banner.svg)
+
 ![CI](https://github.com/OWNER/mon-cher-savon/actions/workflows/ci.yml/badge.svg)
 ![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)
 

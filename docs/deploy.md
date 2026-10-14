@@ -6,13 +6,13 @@ person.
 
 ## Pieces
 
-| Piece               | Where                    | Config in this repo                  |
-| ------------------- | ------------------------ | ------------------------------------ |
-| Web (Next.js)       | Vercel                   | `apps/web/vercel.json`               |
-| API + outbox worker | Render (Docker)          | `render.yaml`, `apps/api/Dockerfile` |
-| PostgreSQL          | Neon or Supabase         | `DATABASE_URL`                       |
-| Photos              | Disk on Render (for now) | `UPLOAD_DIR` — see "Known limits"    |
-| Errors/uptime       | Sentry + health check    | `GET /api/v1/shipping-options`       |
+| Piece               | Where                 | Config in this repo                         |
+| ------------------- | --------------------- | ------------------------------------------- |
+| Web (Next.js)       | Vercel                | `apps/web/vercel.json`                      |
+| API + outbox worker | Render (Docker)       | `render.yaml`, `apps/api/Dockerfile`        |
+| PostgreSQL          | Neon or Supabase      | `DATABASE_URL`                              |
+| Photos              | Cloudinary            | `IMAGE_STORAGE=cloudinary` + `CLOUDINARY_*` |
+| Errors/uptime       | Sentry + health check | `GET /api/v1/shipping-options`              |
 
 ## Order of work
 
@@ -47,9 +47,10 @@ sale, WhatsApp conversations (if enabled) and the `.com.br` domain. Check curren
 
 ## Known limits (honest list)
 
-- **Photos** are saved on a local disk. That works on a single instance with a persistent disk, but
-  an object-storage adapter (R2/Cloudinary with signed uploads) behind the `ImageStorage` port is the
-  production-grade answer.
+- **Photos**: in production set `IMAGE_STORAGE=cloudinary` with `CLOUDINARY_CLOUD_NAME`,
+  `CLOUDINARY_API_KEY` and `CLOUDINARY_API_SECRET` (the API refuses to start without them). The
+  default `local` disk storage is for development and demos only (Render's disk is ephemeral).
+  Not yet exercised against the real Cloudinary service, only against simulated HTTP.
 - **Login throttle and rate limits** live in memory: correct for one API instance. Scaling out
   needs a shared store.
 - **Card payments**: the API supports them, but the checkout screen offers Pix only (card needs the

@@ -29,6 +29,12 @@ const schema = z.object({
     .default('false')
     .transform((v) => v === 'true'),
   UPLOAD_DIR: z.string().default('./uploads'),
+  /** "local" keeps photos on disk (dev/demo); "cloudinary" is for production. */
+  IMAGE_STORAGE: z.enum(['local', 'cloudinary']).default('local'),
+  CLOUDINARY_CLOUD_NAME: z.string().optional(),
+  CLOUDINARY_API_KEY: z.string().optional(),
+  CLOUDINARY_API_SECRET: z.string().optional(),
+  CLOUDINARY_FOLDER: z.string().default('mon-cher-savon'),
   ENABLE_DOCS: z
     .enum(['true', 'false'])
     .optional()
@@ -48,6 +54,17 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     if (!config.MERCADOPAGO_ACCESS_TOKEN || !config.MERCADOPAGO_WEBHOOK_SECRET) {
       throw new Error(
         'Defina MERCADOPAGO_ACCESS_TOKEN e MERCADOPAGO_WEBHOOK_SECRET (ou PAYMENT_MODE=fake apenas em desenvolvimento).',
+      );
+    }
+  }
+  if (config.IMAGE_STORAGE === 'cloudinary') {
+    if (
+      !config.CLOUDINARY_CLOUD_NAME ||
+      !config.CLOUDINARY_API_KEY ||
+      !config.CLOUDINARY_API_SECRET
+    ) {
+      throw new Error(
+        'Defina CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY e CLOUDINARY_API_SECRET (ou IMAGE_STORAGE=local).',
       );
     }
   }

@@ -69,6 +69,7 @@ import {
   HmacSessionTokens,
   InMemoryLoginThrottle,
 } from './infrastructure/security/security.js';
+import { CloudinaryImageStorage } from './infrastructure/storage/cloudinary-image-storage.js';
 import { LocalDiskImageStorage } from './infrastructure/storage/local-image-storage.js';
 import {
   PrismaAdminOrderQuery,
@@ -155,7 +156,15 @@ const CHANNELS = 'NOTIFICATION_CHANNELS';
     },
     {
       provide: IMAGE_STORAGE,
-      useFactory: (c: AppConfig) => new LocalDiskImageStorage(c.UPLOAD_DIR),
+      useFactory: (c: AppConfig) =>
+        c.IMAGE_STORAGE === 'cloudinary'
+          ? new CloudinaryImageStorage({
+              cloudName: c.CLOUDINARY_CLOUD_NAME ?? '',
+              apiKey: c.CLOUDINARY_API_KEY ?? '',
+              apiSecret: c.CLOUDINARY_API_SECRET ?? '',
+              folder: c.CLOUDINARY_FOLDER,
+            })
+          : new LocalDiskImageStorage(c.UPLOAD_DIR),
       inject: [APP_CONFIG],
     },
     {

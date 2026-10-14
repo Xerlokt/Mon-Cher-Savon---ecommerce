@@ -21,6 +21,18 @@ describe('loadConfig', () => {
     expect(config.ORDER_EXPIRATION_MINUTES).toBe(30);
   });
 
+  it('requires Cloudinary credentials when cloudinary storage is selected', () => {
+    const base = { PAYMENT_MODE: 'fake', SESSION_SECRET, IMAGE_STORAGE: 'cloudinary' };
+    expect(() => loadConfig(base)).toThrow(/CLOUDINARY_CLOUD_NAME/);
+    const config = loadConfig({
+      ...base,
+      CLOUDINARY_CLOUD_NAME: 'c',
+      CLOUDINARY_API_KEY: 'k',
+      CLOUDINARY_API_SECRET: 's',
+    });
+    expect(config.CLOUDINARY_FOLDER).toBe('mon-cher-savon');
+  });
+
   it('accepts real credentials', () => {
     const config = loadConfig({
       SESSION_SECRET,

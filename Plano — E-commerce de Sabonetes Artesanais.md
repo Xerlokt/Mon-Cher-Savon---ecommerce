@@ -20,7 +20,7 @@ Regras que valem para a próxima sessão: commits convencionais com assunto em m
 
 ### O que falta (em ordem sugerida)
 **Código que dá para fazer na próxima sessão**
-1. **Fotos em produção:** trocar o disco local (`LocalDiskImageStorage`) por um adaptador de Cloudinary ou Cloudflare R2 com upload assinado, atrás da porta `ImageStorage` (hoje as fotos ficam em `/uploads` no servidor).
+1. ~~**Fotos em produção**~~ **Feito (14/10/2026):** `CloudinaryImageStorage` (upload assinado) atrás da porta `ImageStorage`; ative com `IMAGE_STORAGE=cloudinary` + `CLOUDINARY_*`. Falta só testar com uma conta Cloudinary real.
 2. **Pagamento no cartão na tela:** a API já aceita cartão (`cardToken` + `cardPaymentMethodId`); falta a tela com MercadoPago.js e a chave pública. Precisa de credenciais de sandbox.
 3. **Teste contra o sandbox real do Mercado Pago** (hoje o adaptador só foi testado com HTTP simulado) e contra um bot real do Telegram.
 4. **Screenshots e GIF para o README** (o banner e as imagens não foram gerados), e o protótipo no Figma validado com a vendedora.

@@ -23,7 +23,7 @@ Regras que valem para a próxima sessão: commits convencionais com assunto em m
 1. ~~**Fotos em produção**~~ **Feito (14/10/2026):** `CloudinaryImageStorage` (upload assinado) atrás da porta `ImageStorage`; ative com `IMAGE_STORAGE=cloudinary` + `CLOUDINARY_*`. Falta só testar com uma conta Cloudinary real.
 2. **Pagamento no cartão na tela:** a API já aceita cartão (`cardToken` + `cardPaymentMethodId`); falta a tela com MercadoPago.js e a chave pública. Precisa de credenciais de sandbox.
 3. **Teste contra o sandbox real do Mercado Pago** (hoje o adaptador só foi testado com HTTP simulado) e contra um bot real do Telegram.
-4. **Screenshots e GIF para o README** (o banner e as imagens não foram gerados), e o protótipo no Figma validado com a vendedora.
+4. **Screenshots do README: feito (14/10/2026)** (4 imagens em `docs/screenshots`, geradas pelo spec `04-screenshots`). **Falta:** banner/GIF e o protótipo no Figma validado com a vendedora.
 5. **Imagem Docker da API: feito (14/10/2026)**, de 1,05 GB para 777 MB (`pnpm deploy --prod`, só dependências de produção, Prisma gerado no build; a migração roda com `node_modules/.bin/prisma migrate deploy`, já ajustado no `render.yaml`). O resto é a base do Node e o Prisma. **Falta:** se houver mais de uma instância, trocar os limites de login e de pedidos (hoje em memória) por um armazenamento compartilhado.
 6. Opcional: dashboard com intervalo de datas livre (hoje só hoje, 7 dias e este mês) e reembolso pelo painel (hoje é manual no Mercado Pago).
 

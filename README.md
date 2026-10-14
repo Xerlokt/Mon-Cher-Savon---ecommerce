@@ -28,6 +28,19 @@ and security checked in CI.
 | -------------------------------------- | ----------- | ------------- | -------------- | --- | ------- |
 | Home, catalog, product, about          | 97–99       | 100           | 96–100         | 100 | ≈ 2.0 s |
 
+## Screenshots
+
+| Storefront (phone)                                           | Catalog (desktop)                                                 |
+| ------------------------------------------------------------ | ----------------------------------------------------------------- |
+| ![Home on a phone](docs/screenshots/loja-inicio-celular.png) | ![Catalog on desktop](docs/screenshots/loja-catalogo-desktop.png) |
+
+| Seller dashboard (desktop)                               | Sales list (desktop)                                 |
+| -------------------------------------------------------- | ---------------------------------------------------- |
+| ![Dashboard](docs/screenshots/painel-inicio-desktop.png) | ![Sales](docs/screenshots/painel-vendas-desktop.png) |
+
+Regenerate them with `SCREENSHOTS=1 pnpm --filter @mon-cher-savon/e2e exec playwright test 04-screenshots`
+(they come from the E2E stack with demo data).
+
 ## Stack
 
 TypeScript everywhere · **Next.js 15** (App Router) + Tailwind + Radix · **NestJS** · **PostgreSQL** + **Prisma** ·

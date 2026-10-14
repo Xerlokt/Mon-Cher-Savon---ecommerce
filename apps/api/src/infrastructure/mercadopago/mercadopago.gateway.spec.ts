@@ -95,6 +95,32 @@ describe('MercadoPagoGateway', () => {
     expect(await gateway.getPayment('55')).toEqual({ status: expected, orderId: 'order-9' });
   });
 
+  it('refunds the whole payment, with a stable idempotency key', async () => {
+    const calls: Array<{ key: string | null; body: unknown; auth: string | null }> = [];
+    server.use(
+      http.post(`${BASE}/v1/payments/55/refunds`, async ({ request }) => {
+        calls.push({
+          key: request.headers.get('x-idempotency-key'),
+          auth: request.headers.get('authorization'),
+          body: await request.json(),
+        });
+        return HttpResponse.json({ id: 1, status: 'approved' }, { status: 201 });
+      }),
+    );
+    await gateway.refundPayment('55');
+    await gateway.refundPayment('55');
+    // An empty body means "refund everything"; the same key makes a retry the same refund.
+    expect(calls[0]).toEqual({ key: 'refund-55', auth: 'Bearer TEST-token', body: {} });
+    expect(calls[1]?.key).toBe('refund-55');
+  });
+
+  it('turns a refused refund into a gateway error', async () => {
+    server.use(
+      http.post(`${BASE}/v1/payments/55/refunds`, () => new HttpResponse(null, { status: 400 })),
+    );
+    await expect(gateway.refundPayment('55')).rejects.toMatchObject({ status: 400 });
+  });
+
   it('throws a gateway error on provider failure', async () => {
     server.use(http.get(`${BASE}/v1/payments/1`, () => new HttpResponse(null, { status: 500 })));
     await expect(gateway.getPayment('1')).rejects.toMatchObject({ status: 500 });

@@ -4,7 +4,8 @@ import { Money } from '../shared/money.js';
 import type { OrderPaid } from '../events/order-paid.js';
 import { InvalidOrderTransitionError, OrderNotPaidError } from './errors.js';
 
-export type OrderStatus = 'AWAITING_PAYMENT' | 'PAID' | 'SHIPPED' | 'DELIVERED' | 'CANCELLED';
+export type OrderStatus =
+  'AWAITING_PAYMENT' | 'PAID' | 'SHIPPED' | 'DELIVERED' | 'CANCELLED' | 'REFUNDED';
 
 export interface OrderItem {
   productId: string;
@@ -112,6 +113,16 @@ export class Order {
       throw new InvalidOrderTransitionError(this._status, 'CANCELLED');
     }
     this._status = 'CANCELLED';
+  }
+
+  /** Money was paid, so it can be given back: before shipping, in transit or after delivery. */
+  get isRefundable(): boolean {
+    return this._status === 'PAID' || this._status === 'SHIPPED' || this._status === 'DELIVERED';
+  }
+
+  refund(): void {
+    if (!this.isRefundable) throw new InvalidOrderTransitionError(this._status, 'REFUNDED');
+    this._status = 'REFUNDED';
   }
 
   pullEvents(): OrderPaid[] {

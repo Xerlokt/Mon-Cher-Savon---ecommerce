@@ -1,11 +1,13 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { ConfirmPaymentUseCase } from '../../application/confirm-payment.use-case.js';
 import { CreateOrderUseCase } from '../../application/create-order.use-case.js';
+import { RefundOrderUseCase } from '../../application/admin-orders.use-cases.js';
 import { ExpireOrdersUseCase } from '../../application/expire-orders.use-case.js';
 import { FakePaymentGateway } from '../../application/testing/fakes.js';
 import { startTestDatabase, type TestDatabase } from '../testing/test-database.js';
 import { PrismaOrderRepository } from './prisma-order.repository.js';
 import {
+  PrismaOrderPayments,
   PrismaOutbox,
   PrismaProcessedPayments,
   PrismaStockMovements,
@@ -97,6 +99,30 @@ describe('payment flow on a real database', () => {
     expect(
       await db.prisma.outboxEvent.count({ where: { type: 'OrderPaid' } }),
     ).toBeGreaterThanOrEqual(1);
+  });
+
+  it('refunds a paid order: provider called, status saved, stock and movement restored', async () => {
+    const product = await newProduct(5);
+    const { orderId } = await createOrder.execute(orderInput(product.id, 2));
+    gateway.approve(`pay-${orderId}`);
+    await confirm.execute(`pay-${orderId}`);
+
+    const refund = new RefundOrderUseCase(
+      orders,
+      new PrismaOrderPayments(tx),
+      gateway,
+      products,
+      products,
+      new PrismaStockMovements(tx),
+      tx,
+    );
+    await refund.execute(orderId);
+
+    expect(gateway.refunded).toContain(`pay-${orderId}`);
+    expect((await orders.findById(orderId))?.status).toBe('REFUNDED');
+    expect((await db.prisma.product.findUnique({ where: { id: product.id } }))?.stock).toBe(5);
+    expect(await db.prisma.stockMovement.count({ where: { orderId, reason: 'RESTOCK' } })).toBe(1);
+    await expect(refund.execute(orderId)).rejects.toThrow();
   });
 
   it('never oversells when two payments confirm at the same time', async () => {

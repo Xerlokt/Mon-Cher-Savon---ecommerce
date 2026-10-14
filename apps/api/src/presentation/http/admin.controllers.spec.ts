@@ -1,7 +1,10 @@
 import type { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { afterAll, beforeEach, describe, expect, it } from 'vitest';
-import { ChangeOrderStatusUseCase } from '../../application/admin-orders.use-cases.js';
+import {
+  ChangeOrderStatusUseCase,
+  RefundOrderUseCase,
+} from '../../application/admin-orders.use-cases.js';
 import {
   AdjustStockUseCase,
   ArchiveProductUseCase,
@@ -11,7 +14,9 @@ import {
   UpdateProductUseCase,
 } from '../../application/admin-products.use-cases.js';
 import {
+  FakePaymentGateway,
   InMemoryAdminProducts,
+  InMemoryOrderPayments,
   InMemoryOrders,
   InMemoryProducts,
   InMemoryStockMovements,
@@ -38,6 +43,8 @@ const png = Buffer.concat([
 
 let app: INestApplication;
 let orders: InMemoryOrders;
+let gateway: FakePaymentGateway;
+let orderPayments: InMemoryOrderPayments;
 let coreProducts: InMemoryProducts;
 let adminProducts: InMemoryAdminProducts;
 let movements: InMemoryStockMovements;
@@ -107,6 +114,9 @@ beforeEach(async () => {
   ]);
   adminProducts = new InMemoryAdminProducts();
   movements = new InMemoryStockMovements();
+  gateway = new FakePaymentGateway();
+  orderPayments = new InMemoryOrderPayments();
+  orderPayments.byOrder.set('o1', 'mp-1');
   saved = [];
   app = await createAdminTestApp(
     [
@@ -122,6 +132,18 @@ beforeEach(async () => {
         provide: ChangeOrderStatusUseCase,
         useValue: new ChangeOrderStatusUseCase(
           orders,
+          coreProducts,
+          coreProducts,
+          movements,
+          new InlineUnitOfWork(),
+        ),
+      },
+      {
+        provide: RefundOrderUseCase,
+        useValue: new RefundOrderUseCase(
+          orders,
+          orderPayments,
+          gateway,
           coreProducts,
           coreProducts,
           movements,
@@ -270,6 +292,33 @@ describe('sales', () => {
       .set(auth)
       .send({ status: 'PAID' })
       .expect(400);
+  });
+});
+
+describe('refund', () => {
+  it('refunds a paid sale at the provider and marks it as refunded', async () => {
+    await request(app.getHttpServer()).post('/api/v1/admin/orders/o1/refund').set(auth).expect(200);
+    expect(gateway.refunded).toEqual(['mp-1']);
+    expect((await orders.findById('o1'))?.status).toBe('REFUNDED');
+  });
+
+  it('requires a session and a same-origin request', async () => {
+    await request(app.getHttpServer()).post('/api/v1/admin/orders/o1/refund').expect(401);
+    await request(app.getHttpServer())
+      .post('/api/v1/admin/orders/o1/refund')
+      .set({ Cookie: SESSION_COOKIE_HEADER, Origin: 'https://evil.example' })
+      .expect(403);
+    expect(gateway.refunded).toEqual([]);
+  });
+
+  it('answers 404 for an unknown sale and 422 when it was already refunded', async () => {
+    await request(app.getHttpServer())
+      .post('/api/v1/admin/orders/nope/refund')
+      .set(auth)
+      .expect(404);
+    await request(app.getHttpServer()).post('/api/v1/admin/orders/o1/refund').set(auth).expect(200);
+    await request(app.getHttpServer()).post('/api/v1/admin/orders/o1/refund').set(auth).expect(422);
+    expect(gateway.refunded).toEqual(['mp-1']);
   });
 });
 

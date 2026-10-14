@@ -13,6 +13,7 @@ export const adminOrderStatusFilterSchema = z.enum([
   'SHIPPED',
   'DELIVERED',
   'CANCELLED',
+  'REFUNDED',
 ]);
 
 /** Transitions the seller can trigger by hand. Payment confirmation only comes from the provider. */

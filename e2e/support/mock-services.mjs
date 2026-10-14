@@ -1,5 +1,5 @@
 // Local stand-ins for the external services, so end-to-end tests never call a real API.
-//  - Mercado Pago:  POST /v1/payments, GET /v1/payments/:id
+//  - Mercado Pago:  POST /v1/payments, GET /v1/payments/:id, POST /v1/payments/:id/refunds
 //  - Telegram:      POST /bot<token>/sendMessage
 //  - Test control:  POST /__control/approve/:id, GET /__control/telegram, POST /__control/reset
 import http from 'node:http';
@@ -8,6 +8,7 @@ const port = Number(process.env.MOCK_PORT ?? 4020);
 let nextId = 1000;
 const payments = new Map();
 const telegram = [];
+const refunds = [];
 
 function json(res, status, body) {
   res.writeHead(status, { 'content-type': 'application/json' });
@@ -53,6 +54,15 @@ const server = http.createServer(async (req, res) => {
     return json(res, 200, { id: Number(payment[1]), ...found });
   }
 
+  const refund = path.match(/^\/v1\/payments\/(\d+)\/refunds$/);
+  if (req.method === 'POST' && refund) {
+    const found = payments.get(refund[1]);
+    if (!found || found.status !== 'approved') return json(res, 400, { message: 'not refundable' });
+    refunds.push({ paymentId: refund[1], key: req.headers['x-idempotency-key'] });
+    found.status = 'refunded';
+    return json(res, 201, { id: refunds.length, status: 'approved' });
+  }
+
   if (req.method === 'POST' && /^\/bot[^/]+\/sendMessage$/.test(path)) {
     const body = await readBody(req);
     telegram.push({ chat_id: body.chat_id, text: body.text });
@@ -66,6 +76,7 @@ const server = http.createServer(async (req, res) => {
     found.status = 'approved';
     return json(res, 200, { approved: approve[1] });
   }
+  if (req.method === 'GET' && path === '/__control/refunds') return json(res, 200, refunds);
   if (req.method === 'GET' && path === '/__control/telegram') return json(res, 200, telegram);
   if (req.method === 'GET' && path === '/__control/payments') {
     return json(res, 200, Object.fromEntries(payments));
@@ -73,6 +84,7 @@ const server = http.createServer(async (req, res) => {
   if (req.method === 'POST' && path === '/__control/reset') {
     payments.clear();
     telegram.length = 0;
+    refunds.length = 0;
     return json(res, 200, { reset: true });
   }
   if (req.method === 'GET' && path === '/__health') return json(res, 200, { ok: true });

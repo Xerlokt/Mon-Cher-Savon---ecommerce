@@ -1,4 +1,5 @@
 import type {
+  OrderPaymentReader,
   OutboxRepository,
   ProcessedPaymentRepository,
   StockMovementRepository,
@@ -15,6 +16,18 @@ export class PrismaProcessedPayments implements ProcessedPaymentRepository {
       skipDuplicates: true,
     });
     return count === 1;
+  }
+}
+
+export class PrismaOrderPayments implements OrderPaymentReader {
+  constructor(private readonly provider: DbProvider) {}
+
+  async findApprovedPaymentId(orderId: string): Promise<string | null> {
+    const payment = await this.provider.db.payment.findFirst({
+      where: { orderId, status: 'approved' },
+      select: { providerPaymentId: true },
+    });
+    return payment?.providerPaymentId ?? null;
   }
 }
 

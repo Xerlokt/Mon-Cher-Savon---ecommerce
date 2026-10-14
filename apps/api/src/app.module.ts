@@ -28,6 +28,7 @@ import { OutboxWorker } from './infrastructure/scheduling/outbox.worker.js';
 import { PrismaCatalogQuery } from './infrastructure/prisma/prisma-catalog.query.js';
 import { PrismaOrderRepository } from './infrastructure/prisma/prisma-order.repository.js';
 import {
+  PrismaOrderPayments,
   PrismaOutbox,
   PrismaProcessedPayments,
   PrismaStockMovements,
@@ -55,7 +56,10 @@ import { GetDashboardUseCase } from './application/dashboard.use-case.js';
 import { PrismaDashboardQuery } from './infrastructure/prisma/prisma-dashboard.query.js';
 import { DashboardController } from './presentation/http/dashboard.controller.js';
 import { LoginUseCase } from './application/admin-auth.use-cases.js';
-import { ChangeOrderStatusUseCase } from './application/admin-orders.use-cases.js';
+import {
+  ChangeOrderStatusUseCase,
+  RefundOrderUseCase,
+} from './application/admin-orders.use-cases.js';
 import {
   AdjustStockUseCase,
   ArchiveProductUseCase,
@@ -180,6 +184,22 @@ const CHANNELS = 'NOTIFICATION_CHANNELS';
         );
       },
       inject: [TX],
+    },
+    {
+      provide: RefundOrderUseCase,
+      useFactory: (tx: TransactionalDb, gateway: PaymentGateway) => {
+        const products = new PrismaProductRepository(tx);
+        return new RefundOrderUseCase(
+          new PrismaOrderRepository(tx),
+          new PrismaOrderPayments(tx),
+          gateway,
+          products,
+          products,
+          new PrismaStockMovements(tx),
+          tx,
+        );
+      },
+      inject: [TX, PAYMENT_GATEWAY],
     },
     {
       provide: CreateProductUseCase,

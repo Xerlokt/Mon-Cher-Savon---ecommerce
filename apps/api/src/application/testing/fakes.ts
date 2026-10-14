@@ -13,6 +13,7 @@ import type {
   NotificationSetting,
   NotificationLogRepository,
   NotificationSettingsRepository,
+  OrderPaymentReader,
   OrderRepository,
   OutboxEntry,
   OutboxQueue,
@@ -75,6 +76,20 @@ export class FakePaymentGateway implements PaymentGateway {
   approve(id: string): void {
     const payment = this.payments.get(id);
     if (payment) payment.status = 'APPROVED';
+  }
+  readonly refunded: string[] = [];
+  /** Set to make the next refund fail, like a provider outage. */
+  failRefund = false;
+  async refundPayment(id: string): Promise<void> {
+    if (this.failRefund) throw new Error('provider down');
+    if (!this.refunded.includes(id)) this.refunded.push(id);
+  }
+}
+
+export class InMemoryOrderPayments implements OrderPaymentReader {
+  readonly byOrder = new Map<string, string>();
+  async findApprovedPaymentId(orderId: string): Promise<string | null> {
+    return this.byOrder.get(orderId) ?? null;
   }
 }
 

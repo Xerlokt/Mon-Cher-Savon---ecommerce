@@ -44,6 +44,34 @@ describe('Order', () => {
     expect(() => c.cancel()).toThrow(InvalidOrderTransitionError);
   });
 
+  it('devolve o dinheiro de um pedido pago, enviado ou entregue', () => {
+    for (const build of [
+      () => anOrder().paid().build(),
+      () => anOrder().shipped().build(),
+      () => anOrder().delivered().build(),
+    ]) {
+      const order = build();
+      expect(order.isRefundable).toBe(true);
+      order.refund();
+      expect(order.status).toBe('REFUNDED');
+    }
+  });
+
+  it('não reembolsa o que não foi pago, foi cancelado ou já foi reembolsado', () => {
+    for (const build of [
+      () => anOrder().pendingPayment().build(),
+      () => anOrder().cancelled().build(),
+    ]) {
+      const order = build();
+      expect(order.isRefundable).toBe(false);
+      expect(() => order.refund()).toThrow(InvalidOrderTransitionError);
+    }
+    const done = anOrder().paid().build();
+    done.refund();
+    expect(() => done.refund()).toThrow(InvalidOrderTransitionError);
+    expect(() => done.cancel()).toThrow(InvalidOrderTransitionError);
+  });
+
   it('rejeita transições inválidas', () => {
     const order = anOrder().paid().build();
     expect(() => order.markAsPaid()).toThrow(InvalidOrderTransitionError);

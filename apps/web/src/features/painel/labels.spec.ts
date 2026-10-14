@@ -3,7 +3,8 @@ import { SALES_FILTERS, STATUS_LABEL, formatCep, formatDateTime, formatPhone } f
 
 describe('labels', () => {
   it('uses everyday words and covers every status', () => {
-    expect(Object.keys(STATUS_LABEL)).toHaveLength(5);
+    expect(Object.keys(STATUS_LABEL)).toHaveLength(6);
+    expect(STATUS_LABEL.REFUNDED).toBe('Dinheiro devolvido');
     expect(STATUS_LABEL.PAID).toBe('Pago — falta enviar');
     expect(SALES_FILTERS[0]).toMatchObject({ key: 'enviar', status: 'PAID' });
     expect(SALES_FILTERS.at(-1)?.status).toBeUndefined();

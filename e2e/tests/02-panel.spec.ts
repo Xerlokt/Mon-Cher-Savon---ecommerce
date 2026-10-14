@@ -220,6 +220,33 @@ test.describe('painel da vendedora', () => {
     await expect(page).toHaveURL(/\/painel\/entrar/);
   });
 
+  test('devolver o dinheiro: pede confirmação, reembolsa no provedor e marca a venda', async ({
+    page,
+  }) => {
+    const code = await createPaidOrder('Carla Reembolso');
+    await login(page);
+    await skipTourIfShown(page);
+    await page.goto(`/painel/vendas/${code}`);
+
+    await page.getByRole('button', { name: 'Devolver o dinheiro' }).click();
+    await expect(page.getByText('Devolver o dinheiro ao cliente?')).toBeVisible();
+    await expectAccessible(page, 'confirmar reembolso');
+    await page.getByRole('button', { name: 'Sim, devolver o dinheiro' }).click();
+
+    await expect(page.getByText('Dinheiro devolvido ao cliente.')).toBeVisible();
+    await expect(page.getByText('Dinheiro devolvido', { exact: true }).first()).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Devolver o dinheiro' })).toHaveCount(0);
+
+    const refunds = (await (await fetch(`${E2E.mockUrl}/__control/refunds`)).json()) as Array<{
+      paymentId: string;
+    }>;
+    expect(refunds).toHaveLength(1);
+
+    // The customer's tracking page tells the truth too.
+    await page.goto(`/pedido/${code}`);
+    await expect(page.getByText('Dinheiro devolvido', { exact: true }).first()).toBeVisible();
+  });
+
   test('o manifesto permite instalar o painel como app', async ({ request }) => {
     const manifest = await (await request.get('/painel/manifest.webmanifest')).json();
     expect(manifest).toMatchObject({

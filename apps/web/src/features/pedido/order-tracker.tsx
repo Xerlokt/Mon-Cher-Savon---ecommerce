@@ -22,6 +22,10 @@ const COPY: Record<OrderStatusResponse['status'], { title: string; text: string 
   },
   SHIPPED: { title: 'Pedido enviado', text: 'Seu pedido está a caminho.' },
   DELIVERED: { title: 'Pedido entregue', text: 'Esperamos que você ame os seus sabonetes.' },
+  REFUNDED: {
+    title: 'Dinheiro devolvido',
+    text: 'O valor do seu pedido foi devolvido. Pode levar alguns dias para aparecer na sua conta ou fatura.',
+  },
   CANCELLED: {
     title: 'Pedido cancelado',
     text: 'O pagamento não foi confirmado a tempo. Você pode fazer um novo pedido quando quiser.',

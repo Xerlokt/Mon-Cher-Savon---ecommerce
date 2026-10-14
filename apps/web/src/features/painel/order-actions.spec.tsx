@@ -56,6 +56,42 @@ describe('OrderActions', () => {
     });
   });
 
+  it.each(['PAID', 'SHIPPED', 'DELIVERED'] as const)(
+    'asks before giving the money back on a %s sale, then refunds',
+    async (status) => {
+      const fetchMock = ok();
+      vi.stubGlobal('fetch', fetchMock);
+      renderActions(status);
+      await userEvent.click(screen.getByRole('button', { name: 'Devolver o dinheiro' }));
+      expect(await screen.findByText('Devolver o dinheiro ao cliente?')).toBeInTheDocument();
+      expect(fetchMock).not.toHaveBeenCalled();
+      await userEvent.click(screen.getByRole('button', { name: 'Sim, devolver o dinheiro' }));
+      await waitFor(() => expect(refresh).toHaveBeenCalled());
+      const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+      expect(url).toBe('/api/v1/admin/orders/o1/refund');
+      expect(init.method).toBe('POST');
+      expect(await screen.findByText('Dinheiro devolvido ao cliente.')).toBeInTheDocument();
+    },
+  );
+
+  it('does not offer a refund before payment, in lists, or after the money went back', () => {
+    renderActions('AWAITING_PAYMENT');
+    expect(screen.queryByRole('button', { name: 'Devolver o dinheiro' })).not.toBeInTheDocument();
+    renderActions('PAID', true);
+    expect(screen.queryByRole('button', { name: 'Devolver o dinheiro' })).not.toBeInTheDocument();
+    renderActions('REFUNDED');
+    expect(screen.queryByRole('button', { name: 'Devolver o dinheiro' })).not.toBeInTheDocument();
+  });
+
+  it('keeps the sale as it was and explains when the refund fails', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new TypeError('offline')));
+    renderActions('PAID');
+    await userEvent.click(screen.getByRole('button', { name: 'Devolver o dinheiro' }));
+    await userEvent.click(await screen.findByRole('button', { name: 'Sim, devolver o dinheiro' }));
+    expect(await screen.findByText(/Confira a internet/)).toBeInTheDocument();
+    expect(refresh).not.toHaveBeenCalled();
+  });
+
   it('shows a friendly error and does not refresh when the request fails', async () => {
     vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new TypeError('offline')));
     renderActions('PAID');
@@ -67,7 +103,7 @@ describe('OrderActions', () => {
   it('shows only the main action in compact mode and nothing for finished sales', () => {
     renderActions('PAID', true);
     expect(screen.queryByRole('button', { name: 'Cancelar esta venda' })).not.toBeInTheDocument();
-    renderActions('DELIVERED');
+    renderActions('CANCELLED');
     expect(screen.getAllByRole('button')).toHaveLength(1);
   });
 });

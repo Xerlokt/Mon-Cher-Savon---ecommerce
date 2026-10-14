@@ -25,7 +25,7 @@ Regras que valem para a próxima sessão: commits convencionais com assunto em m
 3. **Teste contra o sandbox real do Mercado Pago** (hoje o adaptador só foi testado com HTTP simulado) e contra um bot real do Telegram.
 4. **Screenshots do README: feito (14/10/2026)** (4 imagens em `docs/screenshots`, geradas pelo spec `04-screenshots`). **Falta:** banner/GIF e o protótipo no Figma validado com a vendedora.
 5. **Imagem Docker da API: feito (14/10/2026)**, de 1,05 GB para 777 MB (`pnpm deploy --prod`, só dependências de produção, Prisma gerado no build; a migração roda com `node_modules/.bin/prisma migrate deploy`, já ajustado no `render.yaml`). O resto é a base do Node e o Prisma. **Falta:** se houver mais de uma instância, trocar os limites de login e de pedidos (hoje em memória) por um armazenamento compartilhado.
-6. Opcional: dashboard com intervalo de datas livre (hoje só hoje, 7 dias e este mês) e reembolso pelo painel (hoje é manual no Mercado Pago).
+6. **Dashboard com datas livres e reembolso pelo painel: feito (14/10/2026).** Botão "Escolher datas" (até 1 ano) e botão "Devolver o dinheiro" (reembolso total, nova situação `REFUNDED`, migração `order_refunded`; estoque só volta se ainda não foi enviado). **Falta:** testar um reembolso real no sandbox do Mercado Pago; reembolso parcial segue manual.
 
 **Depende de uma pessoa** (lista completa em `docs/launch-checklist.md`)
 - Contas e deploy: Mercado Pago de produção, bot do Telegram, Vercel, Render, banco (Neon/Supabase), domínio `.com.br`; variáveis `DEPLOY_ENABLED` e secrets do GitHub.

@@ -35,6 +35,13 @@ export interface PaymentGateway {
   getPayment(
     providerPaymentId: string,
   ): Promise<{ status: 'PENDING' | 'APPROVED' | 'REJECTED'; orderId: string }>;
+  /** Gives the whole amount back. Calling it again for the same payment must be harmless. */
+  refundPayment(providerPaymentId: string): Promise<void>;
+}
+
+/** Finds the confirmed payment of an order (the one a refund goes against). */
+export interface OrderPaymentReader {
+  findApprovedPaymentId(orderId: string): Promise<string | null>;
 }
 
 export interface SaleNotification {

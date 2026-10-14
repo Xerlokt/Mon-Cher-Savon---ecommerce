@@ -6,7 +6,7 @@ import { ConfirmDialog } from '@/shared/ui/confirm-dialog';
 import { useToast } from '@/shared/ui/toast';
 import { adminRequest, friendlyError } from './admin-request';
 
-type Status = 'AWAITING_PAYMENT' | 'PAID' | 'SHIPPED' | 'DELIVERED' | 'CANCELLED';
+type Status = 'AWAITING_PAYMENT' | 'PAID' | 'SHIPPED' | 'DELIVERED' | 'CANCELLED' | 'REFUNDED';
 
 const primary =
   'inline-flex min-h-14 w-full items-center justify-center rounded-full bg-sage-700 px-6 text-lg font-semibold text-cream-50 hover:opacity-90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-terracotta-600 disabled:opacity-60';
@@ -27,6 +27,7 @@ export function OrderActions({
   const toast = useToast();
   const [busy, setBusy] = useState(false);
   const [confirmCancel, setConfirmCancel] = useState(false);
+  const [confirmRefund, setConfirmRefund] = useState(false);
 
   async function change(next: 'SHIPPED' | 'DELIVERED' | 'CANCELLED', success: string) {
     setBusy(true);
@@ -41,6 +42,22 @@ export function OrderActions({
       setBusy(false);
     }
   }
+
+  async function refund() {
+    setBusy(true);
+    try {
+      await adminRequest('POST', `/admin/orders/${orderId}/refund`);
+      toast.show({ message: 'Dinheiro devolvido ao cliente.', durationMs: 5000 });
+      setConfirmRefund(false);
+      router.refresh();
+    } catch (error) {
+      toast.show({ message: friendlyError(error), tone: 'error', durationMs: 7000 });
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const canRefund = status === 'PAID' || status === 'SHIPPED' || status === 'DELIVERED';
 
   return (
     <div className="space-y-3">
@@ -75,13 +92,34 @@ export function OrderActions({
             title="Cancelar esta venda?"
             description={
               status === 'PAID'
-                ? 'Os sabonetes voltam para o seu estoque. Se o cliente já pagou, o reembolso você faz direto no Mercado Pago.'
+                ? 'Os sabonetes voltam para o seu estoque. O dinheiro NÃO volta sozinho: se quiser devolvê-lo, use "Devolver o dinheiro" em vez de cancelar.'
                 : 'O cliente ainda não pagou. A venda sai da lista.'
             }
             confirmLabel="Sim, cancelar a venda"
             tone="danger"
             busy={busy}
             onConfirm={() => change('CANCELLED', 'Venda cancelada.')}
+          />
+        </>
+      ) : null}
+      {!compact && canRefund ? (
+        <>
+          <button type="button" className={danger} onClick={() => setConfirmRefund(true)}>
+            Devolver o dinheiro
+          </button>
+          <ConfirmDialog
+            open={confirmRefund}
+            onOpenChange={setConfirmRefund}
+            title="Devolver o dinheiro ao cliente?"
+            description={
+              status === 'PAID'
+                ? 'O valor total volta para o cliente pelo Mercado Pago e os sabonetes voltam para o seu estoque. Isso não pode ser desfeito.'
+                : 'O valor total volta para o cliente pelo Mercado Pago. Como o pedido já foi enviado, o estoque não muda. Isso não pode ser desfeito.'
+            }
+            confirmLabel="Sim, devolver o dinheiro"
+            tone="danger"
+            busy={busy}
+            onConfirm={() => refund()}
           />
         </>
       ) : null}

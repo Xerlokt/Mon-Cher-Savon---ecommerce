@@ -75,6 +75,15 @@ export class MercadoPagoGateway implements PaymentGateway {
     };
   }
 
+  async refundPayment(providerPaymentId: string): Promise<void> {
+    await this.request(
+      'POST',
+      `/v1/payments/${encodeURIComponent(providerPaymentId)}/refunds`,
+      {},
+      `refund-${providerPaymentId}`,
+    );
+  }
+
   private async request<T>(
     method: 'GET' | 'POST',
     path: string,

@@ -55,4 +55,4 @@ sale, WhatsApp conversations (if enabled) and the `.com.br` domain. Check curren
   needs a shared store.
 - **Card payments**: the API supports them, but the checkout screen offers Pix only (card needs the
   MercadoPago.js tokenization with the public key).
-- **Refunds** are done by hand in Mercado Pago.
+- **Refunds**: the panel's "Devolver o dinheiro" gives the full amount back through Mercado Pago (`POST /v1/payments/:id/refunds`, idempotent per payment). Only tested against simulated HTTP so far: try one real refund in sandbox before launch. Partial refunds are still done by hand in Mercado Pago. "Cancelar esta venda" never moves money.

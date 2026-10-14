@@ -23,7 +23,10 @@ import {
   productUpdateSchema,
   stockAdjustmentSchema,
 } from '@mon-cher-savon/contracts';
-import { ChangeOrderStatusUseCase } from '../../application/admin-orders.use-cases.js';
+import {
+  ChangeOrderStatusUseCase,
+  RefundOrderUseCase,
+} from '../../application/admin-orders.use-cases.js';
 import {
   AdjustStockUseCase,
   ArchiveProductUseCase,
@@ -57,6 +60,7 @@ export class AdminOrdersController {
   constructor(
     @Inject(ADMIN_ORDER_QUERY) private readonly query: AdminOrderQuery,
     @Inject(ChangeOrderStatusUseCase) private readonly change: ChangeOrderStatusUseCase,
+    @Inject(RefundOrderUseCase) private readonly refund: RefundOrderUseCase,
   ) {}
 
   @Get()
@@ -79,6 +83,14 @@ export class AdminOrdersController {
   async status(@Param('id') id: string, @Body() body: unknown) {
     const { status } = changeOrderStatusSchema.parse(body);
     await this.change.execute(id, status);
+    return { ok: true };
+  }
+
+  @Post(':id/refund')
+  @HttpCode(200)
+  @ApiOperation({ summary: 'Devolve o dinheiro ao cliente (reembolso total pelo Mercado Pago)' })
+  async refundOrder(@Param('id') id: string) {
+    await this.refund.execute(id);
     return { ok: true };
   }
 }

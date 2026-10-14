@@ -1,4 +1,5 @@
-export type OrderStatus = 'AWAITING_PAYMENT' | 'PAID' | 'SHIPPED' | 'DELIVERED' | 'CANCELLED';
+export type OrderStatus =
+  'AWAITING_PAYMENT' | 'PAID' | 'SHIPPED' | 'DELIVERED' | 'CANCELLED' | 'REFUNDED';
 
 /** Everyday words for the seller (never "order", "pending" or "fulfilled"). */
 export const STATUS_LABEL: Record<OrderStatus, string> = {
@@ -7,6 +8,7 @@ export const STATUS_LABEL: Record<OrderStatus, string> = {
   SHIPPED: 'Enviado',
   DELIVERED: 'Entregue',
   CANCELLED: 'Cancelada',
+  REFUNDED: 'Dinheiro devolvido',
 };
 
 export const STATUS_TONE: Record<OrderStatus, string> = {
@@ -15,6 +17,7 @@ export const STATUS_TONE: Record<OrderStatus, string> = {
   SHIPPED: 'bg-sage-400/30 text-sage-700',
   DELIVERED: 'bg-sage-400/30 text-sage-700',
   CANCELLED: 'bg-danger/10 text-danger',
+  REFUNDED: 'bg-danger/10 text-danger',
 };
 
 export const SALES_FILTERS: Array<{ key: string; label: string; status?: OrderStatus }> = [
@@ -23,6 +26,7 @@ export const SALES_FILTERS: Array<{ key: string; label: string; status?: OrderSt
   { key: 'entregues', label: 'Entregues', status: 'DELIVERED' },
   { key: 'aguardando', label: 'Aguardando pagamento', status: 'AWAITING_PAYMENT' },
   { key: 'canceladas', label: 'Canceladas', status: 'CANCELLED' },
+  { key: 'reembolsadas', label: 'Dinheiro devolvido', status: 'REFUNDED' },
   { key: 'todas', label: 'Todas' },
 ];
 

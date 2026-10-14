@@ -6,6 +6,7 @@ export const orderStatusSchema = z.enum([
   'SHIPPED',
   'DELIVERED',
   'CANCELLED',
+  'REFUNDED',
 ]);
 export type OrderStatus = z.infer<typeof orderStatusSchema>;
 

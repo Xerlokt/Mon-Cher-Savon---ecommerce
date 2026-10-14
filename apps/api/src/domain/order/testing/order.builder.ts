@@ -67,6 +67,21 @@ export class OrderBuilder {
     return this;
   }
 
+  shipped(): this {
+    this.status = 'SHIPPED';
+    return this;
+  }
+
+  delivered(): this {
+    this.status = 'DELIVERED';
+    return this;
+  }
+
+  cancelled(): this {
+    this.status = 'CANCELLED';
+    return this;
+  }
+
   build(): Order {
     return Order.create({
       id: this.id,

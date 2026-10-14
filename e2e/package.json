@@ -15,7 +15,7 @@
     "@playwright/test": "^1.48.0",
     "@types/node": "^22.7.5",
     "lighthouse": "^12.2.1",
-    "typescript": "^5.6.3",
+    "typescript": "^6.0.3",
     "chrome-launcher": "^1.1.2"
   }
 }

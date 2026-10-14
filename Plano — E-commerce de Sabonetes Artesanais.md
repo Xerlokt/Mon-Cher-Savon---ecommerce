@@ -24,7 +24,7 @@ Regras que valem para a próxima sessão: commits convencionais com assunto em m
 2. **Pagamento no cartão na tela:** a API já aceita cartão (`cardToken` + `cardPaymentMethodId`); falta a tela com MercadoPago.js e a chave pública. Precisa de credenciais de sandbox.
 3. **Teste contra o sandbox real do Mercado Pago** (hoje o adaptador só foi testado com HTTP simulado) e contra um bot real do Telegram.
 4. **Screenshots e GIF para o README** (o banner e as imagens não foram gerados), e o protótipo no Figma validado com a vendedora.
-5. **Enxugar a imagem Docker da API** (1,05 GB) e, se houver mais de uma instância, trocar os limites de login e de pedidos (hoje em memória) por um armazenamento compartilhado.
+5. **Imagem Docker da API: feito (14/10/2026)**, de 1,05 GB para 777 MB (`pnpm deploy --prod`, só dependências de produção, Prisma gerado no build; a migração roda com `node_modules/.bin/prisma migrate deploy`, já ajustado no `render.yaml`). O resto é a base do Node e o Prisma. **Falta:** se houver mais de uma instância, trocar os limites de login e de pedidos (hoje em memória) por um armazenamento compartilhado.
 6. Opcional: dashboard com intervalo de datas livre (hoje só hoje, 7 dias e este mês) e reembolso pelo painel (hoje é manual no Mercado Pago).
 
 **Depende de uma pessoa** (lista completa em `docs/launch-checklist.md`)

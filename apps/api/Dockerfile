@@ -15,12 +15,19 @@ RUN pnpm install --frozen-lockfile --ignore-scripts --filter "@mon-cher-savon/ap
     && pnpm --filter @mon-cher-savon/api exec prisma generate \
     && pnpm --filter @mon-cher-savon/contracts build \
     && pnpm --filter @mon-cher-savon/api build
+# Production-only dependency tree for the API (workspace packages are copied in, not linked).
+# The generated Prisma client lives inside node_modules, so it is regenerated for the pruned tree.
+RUN pnpm --filter @mon-cher-savon/api deploy --prod --legacy --ignore-scripts /out \
+    && cp -r apps/api/dist /out/dist \
+    && cd /out \
+    && node_modules/.bin/prisma generate \
+    && rm -rf src tsconfig*.json vitest*.config.ts /root/.cache
 
 FROM base AS runtime
 ENV NODE_ENV=production
-COPY --from=build --chown=node:node /app /app
+COPY --from=build --chown=node:node /out /app
 USER node
-WORKDIR /app/apps/api
+WORKDIR /app
 EXPOSE 3001
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s CMD node -e "fetch('http://127.0.0.1:'+(process.env.API_PORT||3001)+'/api/v1/shipping-options').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
 CMD ["node", "dist/main.js"]

@@ -59,6 +59,7 @@ export class MercadoPagoGateway implements PaymentGateway {
     const pix = payment.point_of_interaction?.transaction_data;
     return {
       providerPaymentId: String(payment.id),
+      status: mapStatus(payment.status),
       ...(pix?.qr_code ? { pixCopyPaste: pix.qr_code } : {}),
       ...(pix?.qr_code_base64 ? { pixQrCodeBase64: pix.qr_code_base64 } : {}),
     };

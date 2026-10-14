@@ -23,7 +23,9 @@ person.
    used, `TELEGRAM_BOT_TOKEN`. Migrations run before each deploy (`preDeployCommand`).
 3. **Web on Vercel.** Import the repository with **Root Directory = `apps/web`**. Set
    `API_URL` (the Render URL) and **the same `SESSION_SECRET`** as the API, plus `SITE_URL`
-   and `NEXT_PUBLIC_CONTACT_EMAIL`. Every pull request gets a preview automatically.
+   and `NEXT_PUBLIC_CONTACT_EMAIL`. Add `NEXT_PUBLIC_MERCADOPAGO_PUBLIC_KEY` to turn on card payments
+   (empty = Pix only; it also opens the extra CSP origins MercadoPago.js needs, which must be confirmed
+   in the sandbox: open the checkout with the browser console and look for blocked requests). Every pull request gets a preview automatically.
 4. **Seller account.** From a trusted machine:
    `ADMIN_EMAIL=... ADMIN_PASSWORD=... DATABASE_URL=<production url> pnpm --filter @mon-cher-savon/api db:seed-admin`.
 5. **Mercado Pago.** Switch from sandbox to production credentials and register the webhook

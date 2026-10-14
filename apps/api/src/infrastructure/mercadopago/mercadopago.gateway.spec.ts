@@ -40,6 +40,7 @@ describe('MercadoPagoGateway', () => {
 
     expect(result).toEqual({
       providerPaymentId: '987',
+      status: 'PENDING',
       pixCopyPaste: '000201abc',
       pixQrCodeBase64: 'iVBOR',
     });
@@ -71,7 +72,25 @@ describe('MercadoPagoGateway', () => {
       cardPaymentMethodId: 'visa',
     });
     expect(result.providerPaymentId).toBe('1');
+    expect(result.status).toBe('APPROVED');
     expect(body).toMatchObject({ token: 'tok', payment_method_id: 'visa', installments: 1 });
+  });
+
+  it('reports a refused card straight away', async () => {
+    server.use(
+      http.post(`${BASE}/v1/payments`, () =>
+        HttpResponse.json({ id: 2, status: 'rejected', status_detail: 'cc_rejected_other_reason' }),
+      ),
+    );
+    const result = await gateway.createPayment({
+      orderId: 'o',
+      amountCents: 1000,
+      method: 'CARD',
+      payerEmail: 'a@b.co',
+      cardToken: 'tok',
+      cardPaymentMethodId: 'visa',
+    });
+    expect(result.status).toBe('REJECTED');
   });
 
   it('refuses card payments without token or method', async () => {

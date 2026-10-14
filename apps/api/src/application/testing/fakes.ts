@@ -63,8 +63,15 @@ type PaymentState = { status: 'PENDING' | 'APPROVED' | 'REJECTED'; orderId: stri
 
 export class FakePaymentGateway implements PaymentGateway {
   readonly payments = new Map<string, PaymentState>();
+  /** Set to make the next payment come back refused, like a declined card. */
+  refuseNext = false;
   async createPayment(input: { orderId: string }) {
     const providerPaymentId = `pay-${input.orderId}`;
+    if (this.refuseNext) {
+      this.refuseNext = false;
+      this.payments.set(providerPaymentId, { status: 'REJECTED', orderId: input.orderId });
+      return { providerPaymentId, status: 'REJECTED' as const };
+    }
     this.payments.set(providerPaymentId, { status: 'PENDING', orderId: input.orderId });
     return { providerPaymentId, pixCopyPaste: '000201pix' };
   }

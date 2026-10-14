@@ -29,7 +29,10 @@ export default async function CheckoutPage() {
           Não conseguimos carregar as opções de entrega agora. Atualize a página em instantes.
         </p>
       ) : (
-        <CheckoutForm shippingOptions={shippingOptions} />
+        <CheckoutForm
+          shippingOptions={shippingOptions}
+          cardPublicKey={process.env['NEXT_PUBLIC_MERCADOPAGO_PUBLIC_KEY'] || undefined}
+        />
       )}
     </div>
   );

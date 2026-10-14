@@ -6,6 +6,7 @@ import { CART_STORAGE_KEY } from '@/features/carrinho/cart';
 import { CartProvider } from '@/features/carrinho/cart-provider';
 import { CheckoutForm, pixStorageKey } from './checkout-form';
 import type { ShippingOption } from './api';
+import type { CardTokenizer } from './card-tokenizer';
 
 const push = vi.fn();
 vi.mock('next/navigation', () => ({ useRouter: () => ({ push }) }));
@@ -166,5 +167,129 @@ describe('CheckoutForm', () => {
     const { container } = renderForm();
     await screen.findByText(/2x Lavanda/);
     expect(await axe(container)).toHaveNoViolations();
+  });
+
+  describe('pagamento com cartão', () => {
+    const fakeTokenizer = (overrides: Partial<CardTokenizer> = {}): CardTokenizer => ({
+      mount: vi.fn().mockResolvedValue(undefined),
+      tokenize: vi.fn().mockResolvedValue({ token: 'tok_1', paymentMethodId: 'visa' }),
+      unmount: vi.fn(),
+      ...overrides,
+    });
+    const result = { publicCode: 'A7K2', totalCents: 4600, payment: {} };
+
+    async function fillCard(user: ReturnType<typeof userEvent.setup>) {
+      await user.type(screen.getByLabelText('Nome impresso no cartão'), 'MARIA SOUZA');
+      await user.type(screen.getByLabelText('CPF do titular'), '529.982.247-25');
+    }
+
+    it('offers only Pix when there is no public key', async () => {
+      renderForm();
+      await screen.findByLabelText('Nome completo');
+      expect(screen.queryByRole('radio', { name: /Cartão/ })).not.toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Pagar com Pix' })).toBeInTheDocument();
+    });
+
+    it('mounts the secure fields on choosing card and removes them when going back to Pix', async () => {
+      const user = userEvent.setup();
+      const tokenizer = fakeTokenizer();
+      const createTokenizer = vi.fn().mockReturnValue(tokenizer);
+      renderForm({ cardPublicKey: 'TEST-key', createTokenizer });
+
+      await user.click(await screen.findByRole('radio', { name: /Cartão/ }));
+      await waitFor(() => expect(tokenizer.mount).toHaveBeenCalled());
+      expect(createTokenizer).toHaveBeenCalledWith('TEST-key');
+      expect(screen.getByRole('button', { name: 'Pagar com cartão' })).toBeInTheDocument();
+
+      await user.click(screen.getByRole('radio', { name: /Pix/ }));
+      expect(tokenizer.unmount).toHaveBeenCalled();
+      expect(screen.getByRole('button', { name: 'Pagar com Pix' })).toBeInTheDocument();
+    });
+
+    it('sends only the token and the brand, never card data', async () => {
+      const user = userEvent.setup();
+      const tokenizer = fakeTokenizer();
+      const createOrder = vi.fn().mockResolvedValue(result);
+      renderForm({ cardPublicKey: 'TEST-key', createTokenizer: () => tokenizer, createOrder });
+      await fillValid(user);
+      await user.click(screen.getByRole('radio', { name: /Cartão/ }));
+      await fillCard(user);
+      await user.click(screen.getByRole('button', { name: 'Pagar com cartão' }));
+
+      await waitFor(() => expect(push).toHaveBeenCalledWith('/pedido/A7K2'));
+      expect(tokenizer.tokenize).toHaveBeenCalledWith({ name: 'MARIA SOUZA', cpf: '52998224725' });
+      const payload = createOrder.mock.calls[0]?.[0];
+      expect(payload).toMatchObject({
+        paymentMethod: 'CARD',
+        cardToken: 'tok_1',
+        cardPaymentMethodId: 'visa',
+      });
+      expect(JSON.stringify(payload)).not.toContain('52998224725');
+    });
+
+    it('asks for the holder name and a valid CPF before tokenizing', async () => {
+      const user = userEvent.setup();
+      const tokenizer = fakeTokenizer();
+      const createOrder = vi.fn();
+      renderForm({ cardPublicKey: 'TEST-key', createTokenizer: () => tokenizer, createOrder });
+      await fillValid(user);
+      await user.click(screen.getByRole('radio', { name: /Cartão/ }));
+      await user.type(screen.getByLabelText('CPF do titular'), '111.111.111-11');
+      await user.click(screen.getByRole('button', { name: 'Pagar com cartão' }));
+
+      expect(await screen.findByText('Informe o nome como está no cartão')).toBeInTheDocument();
+      expect(screen.getByText('CPF inválido')).toBeInTheDocument();
+      expect(tokenizer.tokenize).not.toHaveBeenCalled();
+      expect(createOrder).not.toHaveBeenCalled();
+    });
+
+    it('explains a card that could not be read and does not create the order', async () => {
+      const user = userEvent.setup();
+      const tokenizer = fakeTokenizer({
+        tokenize: vi
+          .fn()
+          .mockRejectedValue(new Error('Confira os dados do cartão e tente de novo.')),
+      });
+      const createOrder = vi.fn();
+      renderForm({ cardPublicKey: 'TEST-key', createTokenizer: () => tokenizer, createOrder });
+      await fillValid(user);
+      await user.click(screen.getByRole('radio', { name: /Cartão/ }));
+      await fillCard(user);
+      await user.click(screen.getByRole('button', { name: 'Pagar com cartão' }));
+
+      expect(await screen.findByRole('alert')).toHaveTextContent('Confira os dados do cartão');
+      expect(createOrder).not.toHaveBeenCalled();
+      expect(screen.getByRole('button', { name: 'Pagar com cartão' })).toBeEnabled();
+    });
+
+    it('shows the refusal from the bank and lets the customer try again', async () => {
+      const user = userEvent.setup();
+      const createOrder = vi
+        .fn()
+        .mockRejectedValue(new Error('O pagamento foi recusado. Confira os dados do cartão.'));
+      renderForm({
+        cardPublicKey: 'TEST-key',
+        createTokenizer: () => fakeTokenizer(),
+        createOrder,
+      });
+      await fillValid(user);
+      await user.click(screen.getByRole('radio', { name: /Cartão/ }));
+      await fillCard(user);
+      await user.click(screen.getByRole('button', { name: 'Pagar com cartão' }));
+
+      expect(await screen.findByRole('alert')).toHaveTextContent('O pagamento foi recusado');
+      expect(push).not.toHaveBeenCalled();
+      expect(screen.getByRole('button', { name: 'Pagar com cartão' })).toBeEnabled();
+    });
+
+    it('has no accessibility violations with the card form open', async () => {
+      const user = userEvent.setup();
+      const { container } = renderForm({
+        cardPublicKey: 'TEST-key',
+        createTokenizer: () => fakeTokenizer(),
+      });
+      await user.click(await screen.findByRole('radio', { name: /Cartão/ }));
+      expect(await axe(container)).toHaveNoViolations();
+    });
   });
 });

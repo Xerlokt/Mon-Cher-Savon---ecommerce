@@ -1,6 +1,10 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { Product } from '../domain/product/product.js';
-import { CreateOrderUseCase, type CreateOrderInput } from './create-order.use-case.js';
+import {
+  CreateOrderUseCase,
+  PaymentRefusedError,
+  type CreateOrderInput,
+} from './create-order.use-case.js';
 import { FakePaymentGateway, InMemoryOrders, InMemoryProducts } from './testing/fakes.js';
 
 const product = (stock = 5) =>
@@ -51,6 +55,21 @@ describe('CreateOrderUseCase', () => {
     expect(result.totalCents).toBe(4600);
     expect(result.payment.pixCopyPaste).toBeDefined();
     expect(orders.items[0]?.status).toBe('AWAITING_PAYMENT');
+  });
+
+  it('cancels the order and explains when the card is refused', async () => {
+    gateway.refuseNext = true;
+    const cardInput: CreateOrderInput = {
+      ...input(2),
+      paymentMethod: 'CARD',
+      cardToken: 'tok',
+      cardPaymentMethodId: 'visa',
+    };
+    await expect(
+      build(new InMemoryProducts([product()])).execute(cardInput),
+    ).rejects.toBeInstanceOf(PaymentRefusedError);
+    expect(orders.items).toHaveLength(1);
+    expect(orders.items[0]?.status).toBe('CANCELLED');
   });
 
   it('rejects unknown products', async () => {

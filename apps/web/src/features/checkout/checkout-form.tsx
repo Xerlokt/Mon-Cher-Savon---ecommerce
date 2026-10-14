@@ -7,10 +7,16 @@ import {
 } from '@mon-cher-savon/contracts';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useCart } from '@/features/carrinho/cart-provider';
 import { formatPrice } from '@/shared/format';
 import { createOrder as defaultCreateOrder, type ShippingOption } from './api';
+import {
+  CARD_FIELD_IDS,
+  createMercadoPagoTokenizer,
+  type CardTokenizer,
+  type CardTokenizerFactory,
+} from './card-tokenizer';
 import { lookupCep as defaultLookup, type CepAddress } from './viacep';
 
 export const pixStorageKey = (code: string) => `mon-cher-savon:pix:${code}`;
@@ -19,6 +25,22 @@ interface Props {
   shippingOptions: ShippingOption[];
   createOrder?: (payload: CreateOrderRequest) => Promise<CreateOrderResponse>;
   lookup?: (cep: string) => Promise<CepAddress | null>;
+  /** MercadoPago public key (safe to expose). Without it the store accepts Pix only. */
+  cardPublicKey?: string | undefined;
+  createTokenizer?: CardTokenizerFactory;
+}
+
+/** Brazilian CPF check digits (an invalid number would only fail later, at the bank). */
+export function isValidCpf(raw: string): boolean {
+  const d = raw.replace(/\D/g, '');
+  if (d.length !== 11 || /^(\d)\1{10}$/.test(d)) return false;
+  const digit = (len: number) => {
+    let sum = 0;
+    for (let i = 0; i < len; i++) sum += Number(d[i]) * (len + 1 - i);
+    const rest = (sum * 10) % 11;
+    return rest === 10 ? 0 : rest;
+  };
+  return digit(9) === Number(d[9]) && digit(10) === Number(d[10]);
 }
 
 const input =
@@ -54,6 +76,8 @@ export function CheckoutForm({
   shippingOptions,
   createOrder = defaultCreateOrder,
   lookup = defaultLookup,
+  cardPublicKey,
+  createTokenizer = createMercadoPagoTokenizer,
 }: Props) {
   const router = useRouter();
   const { items, subtotalCents, dispatch, hydrated } = useCart();
@@ -76,6 +100,27 @@ export function CheckoutForm({
   const [formError, setFormError] = useState<string | null>(null);
   const [cepStatus, setCepStatus] = useState<'idle' | 'loading' | 'notfound'>('idle');
   const [submitting, setSubmitting] = useState(false);
+  const [method, setMethod] = useState<'PIX' | 'CARD'>('PIX');
+  const [holder, setHolder] = useState({ name: '', cpf: '' });
+  const tokenizer = useRef<CardTokenizer | null>(null);
+
+  // The secure fields live only while "Cartão" is chosen.
+  useEffect(() => {
+    if (method !== 'CARD' || !cardPublicKey) return;
+    const instance = createTokenizer(cardPublicKey);
+    tokenizer.current = instance;
+    instance.mount().catch((error: unknown) => {
+      setFormError(
+        error instanceof Error
+          ? error.message
+          : 'Não foi possível carregar o pagamento por cartão.',
+      );
+    });
+    return () => {
+      instance.unmount();
+      tokenizer.current = null;
+    };
+  }, [method, cardPublicKey, createTokenizer]);
 
   const shippingCents = shippingOptions.find((o) => o.code === shipping)?.priceCents ?? 0;
   const set = (key: keyof typeof values) => (e: React.ChangeEvent<HTMLInputElement>) =>
@@ -100,7 +145,22 @@ export function CheckoutForm({
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (submitting) return;
     setFormError(null);
+
+    let card: { cardToken: string; cardPaymentMethodId: string } | null = null;
+    if (method === 'CARD') {
+      const cardErrors: Record<string, string> = {};
+      if (holder.name.trim().length < 3)
+        cardErrors['cardholderName'] = 'Informe o nome como está no cartão';
+      if (!isValidCpf(holder.cpf)) cardErrors['cpf'] = 'CPF inválido';
+      if (Object.keys(cardErrors).length > 0) {
+        setErrors(cardErrors);
+        setFormError('Confira os campos destacados e tente de novo.');
+        return;
+      }
+    }
+
     const parsed = createOrderSchema.safeParse({
       items: items.map((i) => ({ productId: i.productId, quantity: i.quantity })),
       customer: { name: values.name, phone: values.phone, email: values.email },
@@ -114,7 +174,8 @@ export function CheckoutForm({
         ...(values.complement ? { complement: values.complement } : {}),
       },
       shippingOption: shipping,
-      paymentMethod: 'PIX',
+      paymentMethod: method,
+      ...(method === 'CARD' ? { cardToken: 'pending', cardPaymentMethodId: 'pending' } : {}),
     });
     if (!parsed.success) {
       const next: Record<string, string> = {};
@@ -129,12 +190,24 @@ export function CheckoutForm({
     setErrors({});
     setSubmitting(true);
     try {
-      const result = await createOrder(parsed.data);
+      if (method === 'CARD') {
+        const active = tokenizer.current;
+        if (!active)
+          throw new Error('O pagamento por cartão ainda está carregando. Tente de novo.');
+        const { token, paymentMethodId } = await active.tokenize({
+          name: holder.name.trim(),
+          cpf: holder.cpf.replace(/\D/g, ''),
+        });
+        card = { cardToken: token, cardPaymentMethodId: paymentMethodId };
+      }
+      const result = await createOrder(card ? { ...parsed.data, ...card } : parsed.data);
       try {
-        window.sessionStorage.setItem(
-          pixStorageKey(result.publicCode),
-          JSON.stringify(result.payment),
-        );
+        if (method === 'PIX') {
+          window.sessionStorage.setItem(
+            pixStorageKey(result.publicCode),
+            JSON.stringify(result.payment),
+          );
+        }
       } catch {
         // The order page still works without the cached Pix data.
       }
@@ -268,12 +341,113 @@ export function CheckoutForm({
           ))}
         </fieldset>
 
-        <fieldset>
+        <fieldset className="space-y-3">
           <legend className="font-heading text-2xl text-sage-700">Pagamento</legend>
-          <p className="mt-2 rounded-lg border border-sage-400 bg-white p-4">
-            <strong>Pix</strong> — o QR Code aparece na próxima tela e o pedido é confirmado
-            automaticamente.
-          </p>
+          {cardPublicKey ? (
+            <>
+              <label className="flex min-h-12 cursor-pointer items-center gap-3 rounded-lg border border-sage-400 bg-white px-4">
+                <input
+                  type="radio"
+                  name="payment"
+                  value="PIX"
+                  checked={method === 'PIX'}
+                  onChange={() => setMethod('PIX')}
+                  className="h-5 w-5 accent-sage-700"
+                />
+                <span>
+                  <strong>Pix</strong> — confirmado automaticamente
+                </span>
+              </label>
+              <label className="flex min-h-12 cursor-pointer items-center gap-3 rounded-lg border border-sage-400 bg-white px-4">
+                <input
+                  type="radio"
+                  name="payment"
+                  value="CARD"
+                  checked={method === 'CARD'}
+                  onChange={() => setMethod('CARD')}
+                  className="h-5 w-5 accent-sage-700"
+                />
+                <span>
+                  <strong>Cartão de crédito</strong> — em 1x
+                </span>
+              </label>
+            </>
+          ) : (
+            <p className="rounded-lg border border-sage-400 bg-white p-4">
+              <strong>Pix</strong> — o QR Code aparece na próxima tela e o pedido é confirmado
+              automaticamente.
+            </p>
+          )}
+
+          {method === 'CARD' && cardPublicKey ? (
+            <div className="space-y-4 rounded-lg border border-sage-400 bg-white p-4">
+              <Field
+                id="cardholderName"
+                label="Nome impresso no cartão"
+                error={errors['cardholderName']}
+              >
+                <input
+                  id="cardholderName"
+                  name="cardholderName"
+                  value={holder.name}
+                  onChange={(e) => setHolder((h) => ({ ...h, name: e.target.value }))}
+                  autoComplete="cc-name"
+                  aria-invalid={errors['cardholderName'] ? true : undefined}
+                  aria-describedby={errors['cardholderName'] ? 'cardholderName-error' : undefined}
+                  className={input}
+                />
+              </Field>
+              <Field id="cpf" label="CPF do titular" error={errors['cpf']}>
+                <input
+                  id="cpf"
+                  name="cpf"
+                  value={holder.cpf}
+                  onChange={(e) => setHolder((h) => ({ ...h, cpf: e.target.value }))}
+                  inputMode="numeric"
+                  placeholder="000.000.000-00"
+                  aria-invalid={errors['cpf'] ? true : undefined}
+                  aria-describedby={errors['cpf'] ? 'cpf-error' : undefined}
+                  className={input}
+                />
+              </Field>
+              <div>
+                <p className="font-semibold text-sage-700" id="card-number-label">
+                  Número do cartão
+                </p>
+                <div
+                  id={CARD_FIELD_IDS.number}
+                  aria-labelledby="card-number-label"
+                  className="mt-1 min-h-12 rounded-lg border border-sage-400"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="font-semibold text-sage-700" id="card-expiry-label">
+                    Validade
+                  </p>
+                  <div
+                    id={CARD_FIELD_IDS.expiry}
+                    aria-labelledby="card-expiry-label"
+                    className="mt-1 min-h-12 rounded-lg border border-sage-400"
+                  />
+                </div>
+                <div>
+                  <p className="font-semibold text-sage-700" id="card-cvv-label">
+                    Código de segurança
+                  </p>
+                  <div
+                    id={CARD_FIELD_IDS.cvv}
+                    aria-labelledby="card-cvv-label"
+                    className="mt-1 min-h-12 rounded-lg border border-sage-400"
+                  />
+                </div>
+              </div>
+              <p className="text-sm">
+                Os dados do cartão são digitados em campos seguros do Mercado Pago. A loja nunca vê
+                o número do seu cartão.
+              </p>
+            </div>
+          ) : null}
         </fieldset>
       </div>
 
@@ -305,7 +479,13 @@ export function CheckoutForm({
           disabled={submitting}
           className="inline-flex min-h-12 w-full items-center justify-center rounded-full bg-terracotta-600 text-lg font-semibold text-cream-50 hover:opacity-90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sage-700 disabled:opacity-60"
         >
-          {submitting ? 'Gerando o Pix…' : 'Pagar com Pix'}
+          {method === 'CARD'
+            ? submitting
+              ? 'Pagando…'
+              : 'Pagar com cartão'
+            : submitting
+              ? 'Gerando o Pix…'
+              : 'Pagar com Pix'}
         </button>
       </aside>
     </form>

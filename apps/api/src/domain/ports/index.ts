@@ -31,7 +31,13 @@ export interface PaymentGateway {
     payerEmail: string;
     cardToken?: string;
     cardPaymentMethodId?: string;
-  }): Promise<{ providerPaymentId: string; pixCopyPaste?: string; pixQrCodeBase64?: string }>;
+  }): Promise<{
+    providerPaymentId: string;
+    /** Cards are decided right away; Pix stays pending until the customer pays. */
+    status?: 'PENDING' | 'APPROVED' | 'REJECTED';
+    pixCopyPaste?: string;
+    pixQrCodeBase64?: string;
+  }>;
   getPayment(
     providerPaymentId: string,
   ): Promise<{ status: 'PENDING' | 'APPROVED' | 'REJECTED'; orderId: string }>;

@@ -5,6 +5,12 @@ import { Money } from '../domain/shared/money.js';
 import { Order, type Customer } from '../domain/order/order.js';
 import type { OrderRepository, PaymentGateway, ProductReader } from '../domain/ports/index.js';
 
+export class PaymentRefusedError extends DomainError {
+  constructor() {
+    super('O pagamento foi recusado. Confira os dados do cartão ou tente outro cartão ou o Pix.');
+  }
+}
+
 export type ShippingOption = 'PICKUP' | 'LOCAL' | 'SHIPPING';
 export type ShippingTable = Record<ShippingOption, number>;
 
@@ -78,6 +84,12 @@ export class CreateOrderUseCase {
       ...(input.cardToken ? { cardToken: input.cardToken } : {}),
       ...(input.cardPaymentMethodId ? { cardPaymentMethodId: input.cardPaymentMethodId } : {}),
     });
+    if (payment.status === 'REJECTED') {
+      // Nothing was charged and no stock was taken yet: just close the order.
+      order.cancel();
+      await this.orders.save(order);
+      throw new PaymentRefusedError();
+    }
     return {
       orderId: order.id,
       publicCode: order.publicCode,

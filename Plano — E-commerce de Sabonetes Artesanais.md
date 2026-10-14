@@ -2,11 +2,13 @@
 
 Oct 13, 2026 · @Gian Carlo
 
-## Status atual e próximos passos (atualizado em 13/10/2026)
+## Status atual e próximos passos (atualizado em 14/10/2026)
 
 **Nome da loja: Mon Cher Savon** (o nome provisório "sabonetaria" foi trocado em todo o projeto).
 
-**Etapas 0 a 7 do código estão feitas.** Monorepo `pnpm` + Turborepo, API NestJS (Clean Architecture), web Next.js (vitrine + `/painel`), contratos Zod, tokens de design. Verificado: 174 testes unitários na API (98% de cobertura em domínio e aplicação), 129 no web, 22 de integração com Postgres real, 24 E2E com Playwright (celular e desktop, com axe) e Lighthouse (celular, 4G simulado) com desempenho 96–99, acessibilidade 100, SEO 100 e LCP em torno de 2,0 s.
+**Etapas 0 a 7 do código estão feitas, mais os extras de 14/10/2026** (fotos no Cloudinary, imagem Docker enxuta, datas livres no dashboard, reembolso pelo painel, cartão na tela, screenshots e banner). Monorepo `pnpm` + Turborepo, API NestJS (Clean Architecture), web Next.js (vitrine + `/painel`), contratos Zod, tokens de design. Verificado em 14/10/2026: 202 testes unitários na API, 147 no web, 19 nos contratos, 23 de integração com Postgres real, 26 E2E com Playwright (celular e desktop, com axe; mais 4 de screenshots que só rodam com `SCREENSHOTS=1`). O Lighthouse (celular, 4G simulado) foi medido antes dos extras: desempenho 96–99, acessibilidade 100, SEO 100, LCP perto de 2,0 s; vale rodar de novo.
+
+**Amanhã, comece por aqui:** tudo o que dava para fazer sem credenciais está feito. O próximo passo real é validar no sandbox: com a chave pública e o access token de teste do Mercado Pago, e um bot do Telegram, fechar os itens 2 e 3 abaixo (cartão, reembolso real, webhook assinado, aviso no Telegram). Sem credenciais, o que sobra é o GIF do fluxo de compra (precisa de `ffmpeg`) e os itens que dependem de pessoas.
 
 Onde achar as coisas: `README.md` (rodar e testar), `docs/deploy.md`, `docs/launch-checklist.md`, `docs/notifications.md`, `docs/adr/0001–0005`, `.github/workflows/` (CI, deploy, reset da demo), `e2e/` (Playwright + Lighthouse + mocks locais).
 

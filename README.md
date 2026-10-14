@@ -23,6 +23,12 @@ and security checked in CI.
 - **Seller dashboard for non-experts**: four always-visible tabs, big buttons, plain words, undo for
   destructive actions, a 4-step product wizard, revenue/best sellers/ingredients with the number written
   beside each bar. Installable as an app (PWA).
+- **Card or Pix**: the card option appears when `NEXT_PUBLIC_MERCADOPAGO_PUBLIC_KEY` is set; card data is typed
+  into Mercado Pago's secure fields, so only a one-time token reaches the API. A refused card cancels the order.
+- **Refunds from the panel**: "Devolver o dinheiro" refunds the whole payment through Mercado Pago (idempotent) and
+  puts the stock back when the order was not shipped yet. The dashboard also takes any date range (up to a year).
+- **Production photos**: `IMAGE_STORAGE=cloudinary` stores product photos in Cloudinary (signed upload);
+  local disk is for development only.
 - **Quality gates**: 90%+ coverage on domain/application, real-Postgres integration tests, Playwright E2E on
   phone and desktop with axe accessibility checks, Lighthouse (mobile, slow 4G) with budgets.
 
